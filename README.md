@@ -24,12 +24,7 @@ I just used Noah's example from the framer site. You can open the sketch file in
 * Each layer in on each artboard must be unique to that artboard. Don't go naming sublayers the same name as their parents, their legacy will live on in other artboards.
 * Each artboard should contain the same named layers. This allows the script to connect the dots.
 
-## Nice things
-There are some things that I got to work that didn't work in the original plugin and I hope to port them back some how:
-* Native masks
-* artboards (obviously)
-
-## And somethings I'm gonna integrate next (like 70% done)
+## Some things I'm gonna integrate next (like 70% done)
 * Export CSS for shadows
 * Export CSS instead of images for view with only shapes and for backgrounds of layers (only rectangles and circles which are basically rectangles with infinitely round corners)
 * Make rotation work properly
@@ -49,8 +44,8 @@ There are some things that I got to work that didn't work in the original plugin
 3. **Check it out**: Open up the index.html file and click anywhere.
 **Note**: By default this is moving from state to state on any click. You an assign interaction in the typical Framer way, or you can assign events using the States markup provided in the js file.
 
-## Thanks to [Ale Muñoz](https://github.com/bomberstudios)
-This plugin was based on the great work of Ale. The export images part of the plugin is a total copy and paste job, and looking at his source was awesome. The stuff below is from the original export plugin and it may or may not apply, I really don't know, but someday I will:
+## Thanks to [Ale Muñoz](https://twitter.com/bomberstudios) and [Cemre Güngör](https://twitter.com/gem_ray)
+This plugin was based on the great work of Ale and Cemre. The export images part of the plugin is a total copy and paste job, and looking at his source was awesome. The stuff below is from the original export plugin and it may or may not apply, I really don't know, but someday I will:
 
 ## Special operations
 * **Flatten** To have a group flattened so its child groups don't export individually, append `*` to its name. Example: `Card*`. Flattening complex groups will improve performance.
