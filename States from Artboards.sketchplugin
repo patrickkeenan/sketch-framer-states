@@ -403,7 +403,7 @@ function extract_style_from(shapeLayer) {
     var values = stylestemp[i].split(':');
     if(values.length>1 && stylestemp[i].indexOf('//')==-1 && stylestemp[i].indexOf('/*')==-1){
       var attr = values[0].replace( /-(\w)/g, function _replace( $1, $2 ) {return $2.toUpperCase();});
-      var val = values[1].replace(';','')
+      var val = values[1].replace(';','').trim();
       log('style values'+attr+':'+values[1].replace(';',''));
       styles[attr] = val;
     }
