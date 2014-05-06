@@ -360,8 +360,7 @@ function create_files(page){
   JSON_States=JSON_States.replace(/"(\w+)"\s*:/g, '$1:');
 
   file_path = framer_folder + "/states." + document_name + ".js";
-  file_contents = "window.FramerStatesSheet = window.FramerStatesSheet || {};\n"
-  +"window.FramerStatesSheet = " + JSON_States +"\n";
+  file_contents = "window.FramerStatesSheet = " + JSON_States +"\n";
   save_file_from_string(file_path,file_contents);
 
   try {
