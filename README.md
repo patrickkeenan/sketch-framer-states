@@ -1,39 +1,56 @@
 # Sketch Framer
 
-![](sketch-framer-logo.png?raw=true)
+![](states-logo.png?raw=true)
 
-A plugin to export [Sketch.app](http://www.bohemiancoding.com/sketch) documents into [FramerJS](http://framerjs.com) to make interactive prototypes.
+A plugin to export artboards from [Sketch.app](http://www.bohemiancoding.com/sketch) into [FramerJS](http://framerjs.com) as animated states.
 
 ## Common questions
-* Only works with Sketch Beta right now because the App Store version is sandboxed. [Download Sketch Beta here](http://www.bohemiancoding.com/sketch/beta/).
-* Make sure you copy **both** files as specified below.
+* Only works in the beta version since it uses the new plugin infrastructure. [Download Sketch Beta here](http://www.bohemiancoding.com/sketch/beta/).
+* Make sure you copy **all** the files as specified below.
 
 ## Installation
-1. Download the repository using [this link](https://github.com/bomberstudios/sketch-framer/archive/master.zip)
-2. Grab these two files from the ZIP: `Export to Framer.sketchplugin` and `sketch-framer-config.js`
-3. Copy them to `~/Library/Application Support/sketch/Plugins` (if you're using the App Store version of Sketch, you need to copy them to `~/Library/Containers/com.bohemiancoding.sketch/Data/Library/Application Support/sketch/Plugins`)
+1. Download the repository using [this link](https://github.com/patrickkeenan/sketch-framer-states/archive/master.zip)
+2. Go to Sketch and select Plugins > Reveal Plugins Folder
+3. Move the unzipped folder into that plugins directory
+4. You will now see _sketch-framer-states_ in Sketch's plugin menu
 
-This is what your plugins folder should look like after you copy them:
+## Example
+I just used Noah's example from the framer site. You can open the sketch file in the plugin folder and just run the two commands above and you should have a working Google Now thingy.
 
-![Directory structure](https://f.cloud.github.com/assets/200566/2225432/decec214-9a8d-11e3-9482-07561a01964f.png)
+## Caveats
+* Make sure the layers in your Sketch file are **groups**. If you have stuff inside a group that you want to move around, group those too, like into subgroups. And if you want to move that stuff around, rinse and repeat.
+* Make sure you have **artboards** in your file, that's like the whole point after all. You must have at least one artboard, but that's boring, so have at least two.
+* The way the script works is it looks at your **first artboard**. So if you are using layers that are not on your first artboard, you need to copy them there. You can just move them outside the artboard but then drag them inside using the layer sidebar, you should then seem them vanish, poof!
+* Each layer in on each artboard must be unique to that artboard. Don't go naming sublayers the same name as their parents, their legacy will live on in other artboards.
+* Each artboard should contain the same named layers. This allows the script to connect the dots.
 
-Then you'll see the plugin in the plugins menu:
+## Nice things
+There are some things that I got to work that didn't work in the original plugin and I hope to port them back some how:
+* Native masks
+* artboards (obviously)
 
-![Plugins menu](https://f.cloud.github.com/assets/200566/2153606/d9fd17be-9429-11e3-9d15-674f17f9953f.png)
+## And somethings I'm gonna integrate next (like 70% done)
+* Export CSS for shadows
+* Export CSS instead of images for view with only shapes and for backgrounds of layers (only rectangles and circles which are basically rectangles with infinitely round corners)
+* Make rotation work properly
+* States for filters like saturation and blur
+* Add animation options based on naming convention (e.g. delay100 time300)
+
+## Then some crazy shit I hope we can do
+* Animate between CSS styles (more of a Framer thing)
+* Inject polymer components based on naming convention
+* Make text elements actually text elements and write in font-face code to pull down the fonts.
 
 ## Usage
-1. Create your layered Sketch file, and save it somewhere
-2. Run the plugin from the plugins menu
-3. The framer prototype will be generated in a folder right next to where the Sketch file is saved
+1. **Export your images**: You don't need to export your images all the time if you're just moving stuff around. Just use ctrl + alt + command + D. 
+**Note**: This will make an images directory and fill it with your layers. You may also notice a new page called _Framer Components_. This is a special page, don't make any edits as they'll just be lost with the next export.
+2. **Export your states**: This is the core of the plugin. Its gonna look through your artboards for what you've done – x, y, height, width, opacity, rotation(kinda).
+**Note**: This will make a framer directory with your _states.SketchFilename.js) file unique to your prototype and a _states helper_ file. It will also make an _app.js_ file for you to edit and an index.html for you to open.
+3. **Check it out**: Open up the index.html file and click anywhere.
+**Note**: By default this is moving from state to state on any click. You an assign interaction in the typical Framer way, or you can assign events using the States markup provided in the js file.
 
-![Exported files](https://f.cloud.github.com/assets/200566/2153636/3be2cbf4-942a-11e3-9def-01dc19d83324.png)
-
-## Tips
-* Use only one artboard, or no artboards.
-* Make sure the top left of all your contents align to (0,0)
-* Use unique names for each group in your document to avoid conflicts.
-* Grouping everything in your document in a main "phone" group might help.
-* Every group in your document will become a Framer view.
+## Thanks to [Ale Muñoz](https://github.com/bomberstudios)
+This plugin was based on the great work of Ale. The export images part of the plugin is a total copy and paste job, and looking at his source was awesome. The stuff below is from the original export plugin and it may or may not apply, I really don't know, but someday I will:
 
 ## Special operations
 * **Flatten** To have a group flattened so its child groups don't export individually, append `*` to its name. Example: `Card*`. Flattening complex groups will improve performance.
@@ -45,14 +62,7 @@ Then you'll see the plugin in the plugins menu:
 ## Configuration
 You can customize the exported files (index.html, app.js) by tweaking sketch-framer-config.js. The most common thing you might want to do is import a library file and include it in all your projects.
 
-## Known bugs
-* Masks currently don't work. Workaround: flatten the group that includes a mask (by appending `*` to its name), or use the mask solution described above.
-
-
-## Help us improve Sketch Framer
-
-To propose changes, fork the repository and submit a pull request!
 
 ## Questions?
 
-Reach out to [@bomberstudios](https://twitter.com/bomberstudios) or [@gem_ray](https://twitter.com/gem_ray) on Twitter!
+Let me know [@patrickkeenanme](https://twitter.com/patrickkeenanme) or get in touch with the authors of the original plugin [@bomberstudios](https://twitter.com/bomberstudios) or [@gem_ray](https://twitter.com/gem_ray) on Twitter!
