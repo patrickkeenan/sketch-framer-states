@@ -1,4 +1,4 @@
-# Sketch Framer
+# States for Sketch > Framer
 
 ![](states-logo.png?raw=true)
 
