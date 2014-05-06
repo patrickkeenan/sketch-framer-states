@@ -1,0 +1,651 @@
+// Sketch Framer (ctrl alt command s)
+
+/* Import the variables and complain if they are undefined */
+#import 'sketch-framer-states-config.js'
+
+/*
+This is a port to JSTalk of <https://github.com/leighmcculloch/AppSandboxFileAccess>
+
+## License
+
+Copyright (c) 2013, Leigh McCulloch All rights reserved.
+
+BSD-2-Clause License: http://opensource.org/licenses/BSD-2-Clause
+
+Redistribution and use in source and binary forms, with or without modification,
+are permitted provided that the following conditions are met:
+
+- Redistributions of source code must retain the above copyright notice,
+  this list of conditions and the following disclaimer.
+
+- Redistributions in binary form must reproduce the above copyright notice,
+  this list of conditions and the following disclaimer in the documentation
+  and/or other materials provided with the distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT falseT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN false EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT falseT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
+var AppSandboxFileAccessPersist = {
+  keyForBookmarkDataForURL: function(url) {
+    log("AppSandboxFileAccessPersist.keyForBookmarkDataForURL("+url+")")
+    var urlStr = [url absoluteString];
+    log("> " + [NSString stringWithFormat:@"bd_%1$@", urlStr])
+    return [NSString stringWithFormat:@"bd_%1$@", urlStr];
+  },
+  bookmarkDataForURL: function(url) {
+    log("AppSandboxFileAccessPersist.bookmarkDataForURL('"+ url +"')")
+    var defaults = [NSUserDefaults standardUserDefaults];
+
+    // loop through the bookmarks one path at a time down the URL
+    var subUrl = url;
+    while ([subUrl path].length > 1) { // give up when only '/' is left in the path
+      var key = AppSandboxFileAccessPersist.keyForBookmarkDataForURL(subUrl);
+      var bookmark = [defaults dataForKey:key];
+      if (bookmark) { // if a bookmark is found, return it
+        return bookmark;
+      }
+      subUrl = [subUrl URLByDeletingLastPathComponent];
+    }
+    // no bookmarks for the URL, or parent to the URL were found
+    return nil;
+  },
+  setBookmarkData: function(data, url) {
+    log("AppSandboxFileAccessPersist.setBookmarkData")
+    log("data: " + data)
+    log("URL: " + url)
+    var defaults = [NSUserDefaults standardUserDefaults];
+    var key = AppSandboxFileAccessPersist.keyForBookmarkDataForURL(url);
+    [defaults setObject:data forKey:key];
+  }
+}
+
+var AppSandboxFileAccess = {
+  init: function(opts){
+    this.message = opts.message || "Please authorize Sketch to write to this folder. You will only need to do this once."
+    this.prompt = opts.prompt || "Authorize",
+    this.title = opts.title || "Sketch Authorization"
+    return this;
+  },
+  askPermissionForUrl: function(url) {
+    log("AppSandboxFileAccess.askPermissionForUrl("+url+")")
+    // this url will be the url allowed, it might be a parent url of the url passed in
+    var allowedUrl;
+
+    // create delegate that will limit which files in the open panel can be selected, to ensure only a folder
+    // or file giving permission to the file requested can be selected
+    // AppSandboxFileAccessOpenSavePanelDelegate *openPanelDelegate = [[AppSandboxFileAccessOpenSavePanelDelegate alloc] initWithFileURL:url];
+
+    // check that the url exists, if it doesn't, find the parent path of the url that does exist and ask permission for that
+    var fileManager = [NSFileManager defaultManager];
+    var path = [url path];
+    while (path.length > 1) { // give up when only '/' is left in the path or if we get to a path that exists
+      if ([fileManager fileExistsAtPath:path]) {
+        break;
+      }
+      path = [path stringByDeletingLastPathComponent];
+    }
+    log("Looks like we have a winner: " + path)
+    url = [NSURL fileURLWithPath:path];
+
+    // display the open panel
+    var openPanel = [NSOpenPanel openPanel];
+    [openPanel setMessage:this.message];
+    [openPanel setPrompt:this.prompt];
+    [openPanel setTitle:this.title];
+    // [openPanel setDelegate:openPanelDelegate];
+    [openPanel setCanCreateDirectories:false];
+    [openPanel setCanChooseFiles:true];
+    [openPanel setCanChooseDirectories:true];
+    [openPanel setAllowsMultipleSelection:false];
+    [openPanel setShowsHiddenFiles:false];
+    [openPanel setExtensionHidden:false];
+    [openPanel setDirectoryURL:url];
+    [[NSApplication sharedApplication] activateIgnoringOtherApps:true];
+    var openPanelButtonPressed = [openPanel runModal];
+    if (openPanelButtonPressed == NSFileHandlingPanelOKButton) {
+      allowedUrl = [openPanel URL];
+    }
+    return allowedUrl;
+  },
+  persistPermissionPath: function(path) {
+    this.persistPermissionURL([NSURL fileURLWithPath:path]);
+  },
+  persistPermissionURL: function(url) {
+    log("AppSandboxFileAccess.persistPermissionURL("+url+")")
+    // store the sandbox permissions
+    url = [[url URLByStandardizingPath] URLByResolvingSymlinksInPath]
+    var bookmarkData = [url bookmarkDataWithOptions:NSURLBookmarkCreationWithSecurityScope
+                           includingResourceValuesForKeys:nil
+                           relativeToURL:nil
+                           error:null];
+    if (bookmarkData) {
+      AppSandboxFileAccessPersist.setBookmarkData(bookmarkData, url);
+    }
+  },
+  accessFilePath_withBlock_persistPermission: function(path, block, persist) {
+    log("AppSandboxFileAccess.accessFilePath_withBlock_persistPermission")
+    log("path: " + path)
+    return AppSandboxFileAccess.accessFileURL_withBlock_persistPermission([NSURL fileURLWithPath:path], block, persist);
+  },
+  accessFileURL_withBlock_persistPermission: function(fileUrl, block, persist) {
+    log("AppSandboxFileAccess.accessFileURL_withBlock_persistPermission")
+    log("fileUrl: " + fileUrl)
+    log("block: " + block)
+    log("persist: " + persist)
+    var allowedUrl = false;
+    // standardize the file url and remove any symlinks so that the url we lookup in bookmark data would match a url given by the askPermissionForUrl method
+    var fileUrl = [[fileUrl URLByStandardizingPath] URLByResolvingSymlinksInPath];
+    // lookup bookmark data for this url, this will automatically load bookmark data for a parent path if we have it
+    var bookmarkData = AppSandboxFileAccessPersist.bookmarkDataForURL(fileUrl);
+
+    if (bookmarkData) {
+      log("Bookmark data found")
+      // resolve the bookmark data into an NSURL object that will allow us to use the file
+      var bookmarkDataIsStale;
+      allowedUrl = [NSURL URLByResolvingBookmarkData:bookmarkData options:NSURLBookmarkResolutionWithSecurityScope|NSURLBookmarkResolutionWithoutUI relativeToURL:nil bookmarkDataIsStale:bookmarkDataIsStale error:null];
+      // if the bookmark data is stale, we'll create new bookmark data further down
+      if (bookmarkDataIsStale) {
+        bookmarkData = nil;
+      }
+    } else {
+      log("No bookmark data found")
+    }
+
+    // if allowed url is nil, we need to ask the user for permission
+    if (!allowedUrl) {
+      allowedUrl = AppSandboxFileAccess.askPermissionForUrl(fileUrl);
+      if (!allowedUrl) {
+        // if the user did not give permission, exit out here
+        return false;
+      }
+    }
+    // if we have no bookmark data, we need to create it, this may be because our bookmark data was stale, or this is the first time being given permission
+    if (persist && !bookmarkData) {
+      AppSandboxFileAccess.persistPermissionURL(allowedUrl);
+    }
+    // execute the block with the file access permissions
+    try {
+      [allowedUrl startAccessingSecurityScopedResource];
+      block();
+    } finally {
+      [allowedUrl stopAccessingSecurityScopedResource];
+    }
+    return true;
+  }
+}
+
+function in_sandbox(){
+  var environ = [[NSProcessInfo processInfo] environment];
+  return (nil != [environ objectForKey:@"APP_SANDBOX_CONTAINER_ID"]);
+}
+
+var sandboxAccess = AppSandboxFileAccess.init({
+  message: "Please authorize Sketch to write to this folder. You will only need to do this once per folder.",
+  prompt:  "Authorize",
+  title: "Sketch Authorization"
+})
+
+function save_file_from_string(filename,the_string) {
+
+  log("save_file_from_string("+filename+")")
+  
+  var path = [@"" stringByAppendingString:filename],
+      str = [@"" stringByAppendingString:the_string];
+
+  if (in_sandbox()) {
+    sandboxAccess.accessFilePath_withBlock_persistPermission(filename, function(){
+      [str writeToFile:path atomically:true encoding:NSUTF8StringEncoding error:null];
+    }, true)
+  } else {
+    [str writeToFile:path atomically:true encoding:NSUTF8StringEncoding error:null];
+  }
+
+}
+
+function make_folder(path){
+  if (in_sandbox()) {
+    sandboxAccess.accessFilePath_withBlock_persistPermission(path, function(){
+      [file_manager createDirectoryAtPath:path withIntermediateDirectories:true attributes:nil error:nil];
+    },true)
+  } else {
+    [file_manager createDirectoryAtPath:path withIntermediateDirectories:true attributes:nil error:nil];
+  }
+}
+function make_folders(){
+  // Create folders
+  log('creating folders')
+  var folders = [target_folder,framer_folder]
+  log('creating folders '+folders)
+  for (var i = 0; i < folders.length; i++) {
+    log('creating folder '+folders[i])
+    make_folder(folders[i])
+  }
+}
+
+function is_group(layer) {
+  return [layer isMemberOfClass:[MSLayerGroup class]] || [layer isMemberOfClass:[MSArtboardGroup class]]
+}
+function is_bitmap(layer) {
+  return [layer isMemberOfClass:[MSBitmapLayer class]]
+}
+function should_become_view(layer) {
+  return is_group(layer) || layer.name().slice(-1) == '+';
+}
+function should_ignore_layer(layer) {
+  log('checking layer name for minus '+layer.name())
+  var name = layer.name()
+  return name.slice(-1) == '-' || [layer className] == "MSPage";
+}
+function sanitize_filename(name){
+  return name.replace(/(\s|:|\/)/g ,"_").replace(/__/g,"_").replace("*","").replace("+","").replace("&","");
+}
+function has_art(layer) {
+  // return true;
+  if(is_group(layer) && !should_flatten_layer(layer)) {
+    var has_art = false;
+    var sublayers = [layer layers];
+    for (var sub=([sublayers count] - 1); sub >= 0; sub--) {
+      var sublayer = [sublayers objectAtIndex:sub];
+      if(!should_ignore_layer(sublayer) && !should_become_view(sublayer)) {
+        has_art = true;
+      }
+    }
+    return has_art;
+  } else {
+    return true;
+  }
+}
+function should_flatten_layer(layer) {
+  var name = layer.name();
+  if(name.slice(-1) == "*") {
+    return true;
+  } else {
+    return false;
+  }
+}
+function log_depth(message, depth) {
+  var padding = "";
+  for(var i=0; i<depth; i++) {
+    padding += ">"
+  }
+  log(padding + " " + message);
+}
+
+function metadata_for(layer) {
+  var frame = [layer frame];
+  var gkrect = [GKRect rectWithRect:[layer rectByAccountingForStyleSize:[[layer absoluteRect] rect]]];
+  var absrect = [layer absoluteRect];
+  var positionRect = [layer relativeRect]
+  var parentPositionRect = [[layer parentGroup] absoluteRect]
+
+  var position ={
+    x:[absrect x]-[parentPositionRect x],
+    y:[absrect y]-[parentPositionRect y]
+  }
+
+  var hasMask = false;
+  var x,y,w,h,r;
+
+  if(layer.hasClippingMask){
+    hasMask = true
+    layer.hasClippingMask = false
+  }
+
+  x = position.x
+  y = position.y
+  w = [gkrect width]
+  h = [gkrect height]
+  r = {
+    x: x,
+    y: y,
+    width: w,
+    height: h
+  }
+
+  if(hasMask){
+    layer.hasClippingMask = true
+  }
+
+  log(JSON.stringify(r))
+
+  return r
+}
+
+function extract_shadow_from(layer) {
+  //TODO: Get the blur properties
+  var styles = {}
+  var styleObjects = layer.style().shadows().array()
+  log('Checking shadow'+' '+[styleObjects count]+' '+styles+' '+styleObjects)
+
+  var CSSShadow=false;
+  
+  for(var i=0;i<[styleObjects count];i++){
+    var shadowObject =[styleObjects objectAtIndex:i]
+    log('Found shadow'+shadowObject)
+    
+    var shadowColor='rgba('
+      +Math.round(shadowObject.color().red()*255)+','
+      +Math.round(shadowObject.color().green()*255)+','
+      +Math.round(shadowObject.color().blue()*255)+','
+      +shadowObject.color().alpha()+')'
+    CSSShadow = shadowObject.offsetX()+'px '+shadowObject.offsetY()+'px '+shadowObject.blurRadius()+'px '+shadowObject.spread()+'px '+shadowColor;
+    
+    //layer.style().shadows().removeStylePart(shadowObject)
+  }
+  return CSSShadow;
+
+}
+
+function extract_style_from(shapeLayer) {
+  /*
+  var styles = {}
+  var borders = shapeLayer.style().borders().array()
+
+  log('CSS Box:  '+ shapeLayer.CSSAttributeString().toString()+' ')
+  for(var borderIndex = 0; borderIndex < borders.length; borderIndex++){
+    var border = borders[borderIndex]
+    log('CSS Box border is  '+ border)
+    styles.borderSize = border.thickness();
+    styles.borderColor = 'rgba('
+      +Math.round(border.color().red()*255)+','
+      +Math.round(border.color().green()*255)+','
+      +Math.round(border.color().blue()*255)+','
+      +border.color().alpha()+')'
+    
+    log('CSS Box border position:  '+ border.position())
+    log('CSS Box border fillType:  '+ border.fillType())
+    log('CSS Box border gradient:  '+ border.gradient())
+    log('CSS Box border isEnabled:  '+ border.isEnabled())
+    log('CSS Box border red:  '+ border.color().red())
+    log('CSS Box border blue:  '+ border.color().blue())
+    log('CSS Box border green:  '+ border.color().green())
+    log('CSS Box border alpha:  '+ border.color().alpha())
+    
+  }
+
+  var fills = shapeLayer.style().fills().array()
+  log('CSS Box has fills  '+ fills.length)
+  for(var fillIndex = 0; fillIndex < fills.length; fillIndex++){
+    var fill = fills[fillIndex]
+    styles.backgroundColor = 'rgba('
+      +Math.round(fill.color().red()*255)+','
+      +Math.round(fill.color().green()*255)+','
+      +Math.round(fill.color().blue()*255)+','
+      +fill.color().alpha()+')'
+    log('CSS Box fill is  '+ fill)
+    log('CSS Box fill fillType:  '+ fill.fillType())
+    log('CSS Box fill red:  '+ fill.color().red())
+    log('CSS Box fill blue:  '+ fill.color().blue())
+    log('CSS Box fill green:  '+ fill.color().green())
+    log('CSS Box fill alpha:  '+ fill.color().alpha())
+    log('CSS Box fill gradient:  '+ fill.gradient())
+    log('CSS Box fill isEnabled:  '+ fill.isEnabled())
+  }
+  */
+
+  
+
+  var CSSString = shapeLayer.CSSAttributeString().toString();
+  var styles ={}
+
+  var stylestemp = CSSString.split('\n');
+  
+  for (var i = 0; i < stylestemp.length ; i++) {
+    var values = stylestemp[i].split(':');
+    if(values.length>1 && stylestemp[i].indexOf('//')==-1 && stylestemp[i].indexOf('/*')==-1){
+      var attr = values[0].replace( /-(\w)/g, function _replace( $1, $2 ) {return $2.toUpperCase();});
+      var val = values[1].replace(';','')
+      log('style values'+attr+':'+values[1].replace(';',''));
+      styles[attr] = val;
+    }
+  } 
+
+  var shadow = extract_shadow_from(shapeLayer)
+
+  if(shadow){
+    styles.boxShadow = shadow;
+    log('putting shadow into styles attr'+shadow)
+  }
+
+  //TODO Make styles if its a rectangle, but get border radius working first
+  return {}
+  return styles
+  //+'\n-webkit-transform: rotateZ('+shapeLayer.rotation()+'deg);'
+
+}
+function process_layer(page, layer, artboardName, depth) {
+  depth++
+  
+  if(should_ignore_layer(layer)) {
+    log_depth("Ignoring <" + layer.name() + "> of type <" + [layer className] + ">", depth)
+    return;
+  }
+
+  if(should_become_view(layer)){
+    log_depth("Processing <" + layer.name() + "> of type <" + [layer className] + ">", depth)
+
+    // Get layer data
+    var layerFrame = metadata_for(layer)
+    var layerName = [layer name]
+    var layerNameClean = sanitize_filename(layerName);
+    var layerStyle = layer.style();
+
+    states_metadata[artboardName][layerNameClean] = {}
+    log('making layer sheet object: '+layerNameClean)
+    var layerState = states_metadata[artboardName][layerNameClean]
+    
+    layerState.frame = layerFrame
+    log("checking frame"+layerNameClean+' '+states_metadata[artboardName][layerNameClean].frame.x)
+
+    if(has_art(layer)) {
+      log('layer has art '+layer)
+      layerState.image = {
+        path: "images/" + layerNameClean + ".png"
+        //frame: layerFrame //TODO: Why do we need this?
+      };
+      layerState.imageType = "png";
+      // TODO: Find out how the modification hash is calculated in Framer.app
+      // metadata.modification = new Date();
+    }
+    layerState.frame.opacity = layerStyle.contextSettings().opacity();
+    layerState.frame.rotationZ = layer.rotation();
+    
+    layerState.style = {}
+
+    var styles = extract_style_from(layer)
+    for(var attr in styles){
+      layerState.style[attr] = styles[attr]
+    }
+
+    /* TODO: Make layer names have animation properities
+    if(layerName.indexOf('delay') > -1){
+      log('Automagic: Delay '+layer.name.match(/delay([0-9]*)/)[1])
+      child.delay = parseInt(layerName.match(/delay([0-9]*)/)[1])
+      layerName = layerName.replace(/_?delay([0-9]*)_?/,"")
+    }
+    if(layerName.indexOf('time') > -1){
+      log('Automagic: Time '+layer.name.match(/time([0-9]*)/)[1])
+      child.time = parseInt(layerName.match(/time([0-9]*)/)[1])
+      layerName = layerName.replace(/_?time([0-9]*)_?/,"")
+    }
+    if(layerName.indexOf('spring') > -1){
+      log('Automagic: spring '+layer.name)
+      child.curve = 'spring(400,30,200)'
+      layerName = layerName.replace(/_?spring?/,"")
+    }
+    if(layerName.indexOf('ease-in') > -1){
+      log('Automagic: ease-in '+layer.name)
+      child.curve = 'ease-in'
+      layerName = layerName.replace(/_?ease-in?/,"")
+    }
+    if(layerName.indexOf('ease-out') > -1){
+      log('Automagic: ease-out '+layer.name)
+      child.curve = 'ease-out'
+      layerName = layerName.replace(/_?ease-out?/,"")
+    }
+    */
+
+    // Export image if layer has no subgroups
+    if (!should_flatten_layer(layer) && is_group(layer)) {
+      var childLayers = [layer layers];
+      var childLayersCount = [childLayers count]
+
+      for (var childLayerIndex=(childLayersCount - 1); childLayerIndex >= 0; childLayerIndex--) {
+        var current = [childLayers objectAtIndex:childLayerIndex];
+        if(current.hasClippingMask()) {
+          log('found mask'+current)
+          var maskParentFrame = layerState.frame;
+          var metadataForMask = metadata_for(current);
+          
+          layer.resizeRoot()
+          //metadataForMask.x = metadataForMask.x - maskParentFrame.x
+          //metadataForMask.y = metadataForMask.y - maskParentFrame.y
+          layerState.maskFrame = metadataForMask
+
+        }else{
+          if(!is_bitmap(current)){
+            log('not a mask'+current+' '+is_bitmap(layer))
+            process_layer(page,current,artboardName,depth+1);  
+          }
+          
+        }
+      }
+    }
+
+    // Capture hierarchy in export    
+    if([layer parentGroup]){
+      var parentGroup = [layer parentGroup]
+      if(![parentGroup isMemberOfClass:[MSArtboardGroup class]] && ![parentGroup isMemberOfClass:[MSPage class]]){
+        layerState.parentGroup = sanitize_filename([parentGroup name])
+      }
+    }
+    
+  }
+  log('returning state'+' '+layer+' '+layerName+' '+layerNameClean+' '+states_metadata[artboardName][layerNameClean])
+
+  return states_metadata;
+
+  /* TODO: Figure out how to scale up bitmaps on the Components page
+  But the question is how do you tell what the native resolution of a bitmap is? writeBitmapImageToFile?
+  log('should I export '+layer+' bitmap: '+is_bitmap(layer))
+  if(is_bitmap(layer)){
+    //export_full_bitmap(page, layer,images_folder + "/" + sanitize_filename(layer.name()) + "-bitmap.png")
+  }
+  */
+
+}
+
+function create_files(page){
+  log("create_files("+states_metadata+")")
+  var JSON_States = JSON.stringify(states_metadata,null,2)
+  JSON_States=JSON_States.replace(/"(\w+)"\s*:/g, '$1:');
+
+  file_path = framer_folder + "/states." + document_name + ".js";
+  file_contents = "window.FramerStatesSheet = window.FramerStatesSheet || {};\n"
+  +"window.FramerStatesSheet = " + JSON_States +"\n";
+  save_file_from_string(file_path,file_contents);
+
+  try {
+    // Save JS files from templates:
+    save_file_from_string(framer_folder + "/framer.states.js", FramerStatesJSContents);
+    //save_file_from_string(framer_folder + "/framer.js", Framer2Source);
+    if(![file_manager fileExistsAtPath:(target_folder + "/" + FramerScriptFileName)]) {
+      save_file_from_string(target_folder + "/" + FramerScriptFileName, FramerScriptFileContents);
+    }
+  } catch(e) {
+    log(e)
+  }
+
+  // Create HTML if it's the first time we're exporting
+  log('checking for index.html')
+  if(![file_manager fileExistsAtPath:(target_folder + "/index.html")]) {
+
+    save_file_from_string(target_folder + "/index.html",  FramerIndexFileContents.replace("{{ views }}",'\n\t\t<script src="framer/states.' + document_name + '.js"></script>'));
+  }
+
+}
+
+function lookForCSSBoxBackground(layer){
+  var layerChildren = [layer children]
+  var CSSBoxBackground = false;
+
+  if([layerChildren count] > 0){
+    for (var layerIndex =0;layerIndex < [layerChildren count]; layerIndex++){
+      var child = [layerChildren objectAtIndex:layerIndex]
+      if(child.class() == 'MSShapeGroup' && layerIndex < 3 && child.isPartOfClippingMask()){
+        CSSBoxBackground = child
+      }else if(child.class() == 'MSShapeGroup' && layerIndex < 2 && !child.hasClippingMask()){
+        CSSBoxBackground = child
+      }
+    }
+  }
+  return CSSBoxBackground;
+}
+
+var document_path = [[doc fileURL] path].split([doc displayName])[0],
+    document_name = [doc displayName].replace(".sketch",""),
+    target_folder = document_path + document_name,
+    images_folder = target_folder + "/images",
+    framer_folder = target_folder + "/framer",
+    file_manager = [NSFileManager defaultManager],
+    invisible_layers = [],
+    project_metadata = [],
+    states_metadata = {}
+
+function main() {
+
+  log('########################################################################');
+  
+  var thisPage = [doc currentPage]
+  var pageArtboards = [thisPage artboards]
+  var firstArtboard = [pageArtboards lastObject]
+  var artboardCount = [pageArtboards count]
+
+  if(artboardCount > 0){
+    
+    for (var artboardIndex = artboardCount-1; artboardIndex >= 0; artboardIndex-- ){
+      var thisArtboard = [pageArtboards objectAtIndex:artboardIndex]
+      var artboardName = sanitize_filename([thisArtboard name]);
+
+      
+      states_metadata[artboardName] = {}
+      var artboardLayers = [thisArtboard layers]
+      var layerCount = [artboardLayers count]
+
+      log('checking artboard '+artboardName+' '+layerCount)
+
+      for (var layerIndex = 0;layerIndex < layerCount ; layerIndex++){
+
+        var thisLayer = [artboardLayers objectAtIndex:layerIndex]
+        var thisLayerName = sanitize_filename([thisLayer name])
+        log('checking first layer '+thisLayerName)
+
+        if(should_become_view(thisLayer)){
+          process_layer(thisPage, thisLayer, artboardName, 0);
+        }
+      }
+
+    }
+
+    make_folders()
+    create_files(thisPage)
+
+    [doc setCurrentPage:thisPage]
+    [doc showMessage: "Sketch Framer: Project exported to “" + target_folder + "”"];
+    
+  }else{
+    [doc showMessage: "Sketch Framer: You must have multiple artboards for this to work"];
+  }
+
+}
+
+main();
