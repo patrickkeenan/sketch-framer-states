@@ -92,37 +92,32 @@ function log_depth(message, depth) {
 
 function metadata_for(layer) {
   var frame = [layer frame];
-  var gkrect = [GKRect rectWithRect:[layer rectByAccountingForStyleSize:[[layer absoluteRect] rect]]];
-  var absrect = [layer absoluteRect];
+  var gkRect = [GKRect rectWithRect:[layer rectByAccountingForStyleSize:[[layer absoluteRect] rect]]];
+  var absRect = [layer absoluteRect];
   var positionRect = [layer relativeRect]
   var parentPositionRect = [[layer parentGroup] absoluteRect]
 
-  var position ={
-    x:[absrect x]-[parentPositionRect x],
-    y:[absrect y]-[parentPositionRect y]
+  var position = {
+    x: [absRect x] - [parentPositionRect x],
+    y: [absRect y] - [parentPositionRect y]
   }
 
   var hasMask = false;
-  var x,y,w,h,r;
 
-  if(layer.hasClippingMask){
-    hasMask = true
-    layer.hasClippingMask = false
+  if (layer.hasClippingMask) {
+    hasMask = true;
+    layer.hasClippingMask = false;
   }
 
-  x = position.x
-  y = position.y
-  w = [gkrect width]
-  h = [gkrect height]
-  r = {
-    x: x,
-    y: y,
-    width: w,
-    height: h
-  }
+  var r = {
+    x: position.x,
+    y: position.y,
+    width: gkRect width],
+    height: [gkRect height]
+  };
 
-  if(hasMask){
-    layer.hasClippingMask = true
+  if (hasMask) {
+    layer.hasClippingMask = true;
   }
 
   log(JSON.stringify(r))
