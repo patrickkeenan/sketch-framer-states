@@ -112,7 +112,7 @@ function metadata_for(layer) {
   var r = {
     x: position.x,
     y: position.y,
-    width: gkRect width],
+    width: [gkRect width],
     height: [gkRect height]
   };
 
