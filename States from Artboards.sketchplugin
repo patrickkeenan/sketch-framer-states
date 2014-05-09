@@ -236,7 +236,9 @@ function main() {
 
     }
 
-    make_folders()
+    // Create folders
+    create_folder(target_folder);
+    create_folder(framer_folder);
     create_files(thisPage)
 
     [doc setCurrentPage:thisPage]

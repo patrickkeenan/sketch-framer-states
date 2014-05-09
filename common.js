@@ -11,23 +11,14 @@ function save_file_from_string(filename,the_string) {
   }
 }
 
-function make_folder(path){
+function create_folder(path) {
+  log('creating folder ' + path);
   if (in_sandbox()) {
     sandboxAccess.accessFilePath_withBlock_persistPermission(path, function(){
       [file_manager createDirectoryAtPath:path withIntermediateDirectories:true attributes:nil error:nil];
-    },true)
+    }, true)
   } else {
     [file_manager createDirectoryAtPath:path withIntermediateDirectories:true attributes:nil error:nil];
-  }
-}
-function make_folders(){
-  // Create folders
-  log('creating folders')
-  var folders = [target_folder,framer_folder]
-  log('creating folders '+folders)
-  for (var i = 0; i < folders.length; i++) {
-    log('creating folder '+folders[i])
-    make_folder(folders[i])
   }
 }
 

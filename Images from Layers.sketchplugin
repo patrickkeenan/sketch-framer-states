@@ -345,15 +345,8 @@ function main() {
     //create_files(focusPage, project_metadata, states_metadata)
 
     // Create folders
-    if (in_sandbox()) {
-      sandboxAccess.accessFilePath_withBlock_persistPermission(target_folder, function(){
-        [file_manager createDirectoryAtPath:target_folder withIntermediateDirectories:true attributes:nil error:nil];
-        [file_manager createDirectoryAtPath:images_folder withIntermediateDirectories:true attributes:nil error:nil];
-      }, true)
-    } else {
-      [file_manager createDirectoryAtPath:target_folder withIntermediateDirectories:true attributes:nil error:nil];
-      [file_manager createDirectoryAtPath:images_folder withIntermediateDirectories:true attributes:nil error:nil];
-    }
+    create_folder(target_folder);
+    create_folder(images_folder);
 
     // Get all layers in current page
     var all_layers = [[doc currentPage] layers],
