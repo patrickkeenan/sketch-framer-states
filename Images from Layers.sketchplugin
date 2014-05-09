@@ -2,6 +2,7 @@
 
 /* Import the variables and complain if they are undefined */
 #import 'sandbox.js'
+#import 'common.js'
 
 
 /* Configuration */
@@ -11,37 +12,6 @@ function major_version() {
   return [NSApp applicationVersion].substr(0,1);
 }
 
-function should_become_view(layer) {
-  return is_group(layer) || [layer name].slice(-1) == '+';
-}
-function is_group(layer) {
-  return [layer isMemberOfClass:[MSLayerGroup class]] || [layer isMemberOfClass:[MSArtboardGroup class]]
-}
-function should_ignore_layer(layer) {
-  return [layer name].slice(-1) == '-' || [layer className] == "MSPage";
-}
-function sanitize_filename(name){
-  return name.replace(/(\s|:|\/)/g ,"_").replace(/__/g,"_").replace("*","").replace("+","").replace("@@hidden","");
-}
-function has_art(layer) {
-  // return true;
-
-  if(is_group(layer) && !should_flatten_layer(layer)) {
-    var has_art = false;
-
-    var sublayers = [layer layers];
-    for (var sub=([sublayers count] - 1); sub >= 0; sub--) {
-      var sublayer = [sublayers objectAtIndex:sub]
-      if(!should_ignore_layer(sublayer) && !should_become_view(sublayer)) {
-        has_art = true;
-      }
-    }
-    return has_art;
-
-  } else {
-    return true;
-  }
-}
 function export_layer(layer, depth) {
   log_depth("Exporting <" + [layer name] + ">", depth);
   var filename = images_folder + "/" + sanitize_filename([layer name]) + ".png";
@@ -69,21 +39,7 @@ function export_layer(layer, depth) {
   // remove it
   //[layer removeFromParent];
 }
-function should_flatten_layer(layer) {
-  var name = [layer name];
-  if(name.slice(-1) == "*") {
-    return true;
-  } else {
-    return false;
-  }
-}
-function log_depth(message, depth) {
-  var padding = "";
-  for(var i=0; i<depth; i++) {
-    padding = padding + ">"
-  }
-  log(padding + " " + message);
-}
+
 function process_layer(layer,metadata_container,depth) {
 
   if (should_ignore_layer(layer)) {
@@ -133,21 +89,11 @@ function process_layer(layer,metadata_container,depth) {
     [layer setName:_name];
   }
 }
-function save_file_from_string(filename,the_string) {
-  var path = [@"" stringByAppendingString:filename],
-      str = [@"" stringByAppendingString:the_string];
 
-  if (in_sandbox()) {
-    sandboxAccess.accessFilePath_withBlock_persistPermission(filename, function(){
-      [str writeToFile:path atomically:true encoding:NSUTF8StringEncoding error:null];
-    }, true)
-  } else {
-    [str writeToFile:path atomically:true encoding:NSUTF8StringEncoding error:null];
-  }
-}
 function get_next_id() {
   return ++object_id;
 }
+
 function mask_bounds(layer) {
   var sublayers = [layer layers];
   var effective_mask = null;
@@ -175,6 +121,7 @@ function mask_bounds(layer) {
     return null;
   }
 }
+
 function calculate_real_position_for(layer) {
 
   var gkrect = [GKRect rectWithRect:[layer rectByAccountingForStyleSize:[[layer absoluteRect] rect]]],
@@ -190,6 +137,7 @@ function calculate_real_position_for(layer) {
     y: Math.round(GKRectRulerY)
   }
 }
+
 function metadata_for(layer) {
   var frame = [layer frame],
       gkrect = [GKRect rectWithRect:[layer rectByAccountingForStyleSize:[[layer absoluteRect] rect]]],
@@ -228,6 +176,7 @@ function metadata_for(layer) {
 
   return r
 }
+
 function extract_metadata_from(layer) {
   var maskFrame = mask_bounds(layer);
   var layerFrame = metadata_for(layer);
@@ -259,115 +208,6 @@ function extract_metadata_from(layer) {
   return metadata;
 }
 
-function extract_shadow_from(layer) {
-  //TODO: Get the blur properties
-  var styles = {}
-  var styleObjects = layer.style().shadows().array()
-  log('Checking shadow'+' '+[styleObjects count]+' '+styles+' '+styleObjects)
-
-  var CSSShadow=false;
-  
-  for(var i=0;i<[styleObjects count];i++){
-    var shadowObject =[styleObjects objectAtIndex:i]
-    log('Found shadow'+shadowObject)
-    
-    var shadowColor='rgba('
-      +Math.round(shadowObject.color().red()*255)+','
-      +Math.round(shadowObject.color().green()*255)+','
-      +Math.round(shadowObject.color().blue()*255)+','
-      +shadowObject.color().alpha()+')'
-    CSSShadow = shadowObject.offsetX()+'px '+shadowObject.offsetY()+'px '+shadowObject.blurRadius()+'px '+shadowObject.spread()+'px '+shadowColor;
-    
-    //layer.style().shadows().removeStylePart(shadowObject)
-  }
-  return CSSShadow;
-
-}
-
-function extract_style_from(shapeLayer) {
-  /*
-  var styles = {}
-  var borders = shapeLayer.style().borders().array()
-
-  log('CSS Box:  '+ shapeLayer.CSSAttributeString().toString()+' ')
-  for(var borderIndex = 0; borderIndex < borders.length; borderIndex++){
-    var border = borders[borderIndex]
-    log('CSS Box border is  '+ border)
-    styles.borderSize = border.thickness();
-    styles.borderColor = 'rgba('
-      +Math.round(border.color().red()*255)+','
-      +Math.round(border.color().green()*255)+','
-      +Math.round(border.color().blue()*255)+','
-      +border.color().alpha()+')'
-    
-    log('CSS Box border position:  '+ border.position())
-    log('CSS Box border fillType:  '+ border.fillType())
-    log('CSS Box border gradient:  '+ border.gradient())
-    log('CSS Box border isEnabled:  '+ border.isEnabled())
-    log('CSS Box border red:  '+ border.color().red())
-    log('CSS Box border blue:  '+ border.color().blue())
-    log('CSS Box border green:  '+ border.color().green())
-    log('CSS Box border alpha:  '+ border.color().alpha())
-    
-  }
-
-  var fills = shapeLayer.style().fills().array()
-  log('CSS Box has fills  '+ fills.length)
-  for(var fillIndex = 0; fillIndex < fills.length; fillIndex++){
-    var fill = fills[fillIndex]
-    styles.backgroundColor = 'rgba('
-      +Math.round(fill.color().red()*255)+','
-      +Math.round(fill.color().green()*255)+','
-      +Math.round(fill.color().blue()*255)+','
-      +fill.color().alpha()+')'
-    log('CSS Box fill is  '+ fill)
-    log('CSS Box fill fillType:  '+ fill.fillType())
-    log('CSS Box fill red:  '+ fill.color().red())
-    log('CSS Box fill blue:  '+ fill.color().blue())
-    log('CSS Box fill green:  '+ fill.color().green())
-    log('CSS Box fill alpha:  '+ fill.color().alpha())
-    log('CSS Box fill gradient:  '+ fill.gradient())
-    log('CSS Box fill isEnabled:  '+ fill.isEnabled())
-  }
-  */
-
-  var CSSString = shapeLayer.CSSAttributeString().toString();
-  var styles ={}
-
-  var stylestemp = CSSString.split('\n');
-  
-  for (var i = 0; i < stylestemp.length ; i++) {
-    var values = stylestemp[i].split(':');
-    if(values.length>1 && stylestemp[i].indexOf('//')==-1 && stylestemp[i].indexOf('/*')==-1){
-      var attr = values[0].replace( /-(\w)/g, function _replace( $1, $2 ) {return $2.toUpperCase();});
-      var val = values[1].replace(';','')
-      log('style values'+attr+':'+values[1].replace(';',''));
-      styles[attr] = val;
-    }
-  } 
-  
-  return styles
-  //+'\n-webkit-transform: rotateZ('+shapeLayer.rotation()+'deg);'
-
-}
-function lookForCSSBoxBackground(layer){
-  var layerChildren = [layer children]
-  var CSSBoxBackground = false;
-
-  if([layerChildren count] > 0){
-    for (var layerIndex =0;layerIndex < [layerChildren count]; layerIndex++){
-      var child = [layerChildren objectAtIndex:layerIndex]
-      if(child.class() == 'MSShapeGroup' && layerIndex < 3 && child.isPartOfClippingMask()){
-        CSSBoxBackground = child
-      }else if(child.class() == 'MSShapeGroup' && layerIndex < 2 && !child.hasClippingMask()){
-        CSSBoxBackground = child
-      }
-    }
-  }
-  return CSSBoxBackground;
-}
-
-
 function findAssetsPage(focusPage, firstArtboard){
   var assetsPage = false
   var allPages = [doc pages];
@@ -379,6 +219,7 @@ function findAssetsPage(focusPage, firstArtboard){
   }
   return assetsPage;
 }
+
 function updateAssetsPage(focusPage, firstArtboard){
   var assetsPage = findAssetsPage(focusPage, firstArtboard)
   if(assetsPage!=false){
@@ -400,8 +241,8 @@ function updateAssetsPage(focusPage, firstArtboard){
   [copyOfArtboard removeFromParent]
 
   return assetsPage;
-  
 }
+
 function addLayerToAssetsPage(layer,assetsPage){
   if (is_group(layer) && should_become_view(layer)) {
     var styles = {}
