@@ -7,6 +7,7 @@
 
 /* Configuration */
 var framerjs_url = "http://rawgit.com/koenbok/Framer/master/build/framer.js";
+var ASSETS_PAGE_NAME = "FramerComponents";
 
 function major_version() {
   return [NSApp applicationVersion].substr(0,1);
@@ -208,77 +209,75 @@ function extract_metadata_from(layer) {
   return metadata;
 }
 
-function findAssetsPage(focusPage, firstArtboard){
-  var assetsPage = false
+function findAssetsPage(focusPage, firstArtboard) {
   var allPages = [doc pages];
-  for(var p=0; p < [allPages count]; p++){
-    var currentPage = [allPages objectAtIndex:p]
-    if(currentPage.name() == 'FramerComponents'){
-      assetsPage = currentPage;
+  for (var p = 0; p < [allPages count]; p++) {
+    var currentPage = [allPages objectAtIndex:p];
+    if (currentPage.name() == ASSETS_PAGE_NAME) {
+      return currentPage;
     }
   }
+}
+
+function updateAssetsPage(focusPage, firstArtboard) {
+  var assetsPage = findAssetsPage(focusPage, firstArtboard);
+  if (assetsPage) {
+    [doc removePage:assetsPage];
+  }
+
+  assetsPage = [doc addBlankPage];
+  [assetsPage setName:ASSETS_PAGE_NAME];
+
+  var copyOfArtboard = [firstArtboard copy];
+
+  [assetsPage addLayer:copyOfArtboard];
+  var copyOfArtboardLayers = [copyOfArtboard layers];
+
+  for (var l = 0; l < [copyOfArtboardLayers count]; l++) {
+    addLayerToAssetsPage([copyOfArtboardLayers objectAtIndex:l], assetsPage);
+  }
+
+  [copyOfArtboard removeFromParent];
+
   return assetsPage;
 }
 
-function updateAssetsPage(focusPage, firstArtboard){
-  var assetsPage = findAssetsPage(focusPage, firstArtboard)
-  if(assetsPage!=false){
-    doc.removePage(assetsPage)
-  }
-
-  assetsPage = [doc addBlankPage]
-  assetsPage.setName("FramerComponents")
-
-  var copyOfArtboard = [firstArtboard copy]
-
-  assetsPage.addLayer(copyOfArtboard)
-  var copyOfArtboardLayers = [copyOfArtboard layers]
-
-  for(var l=0; l < [copyOfArtboardLayers count]; l++){
-    addLayerToAssetsPage([copyOfArtboardLayers objectAtIndex:l],assetsPage)
-  }
-
-  [copyOfArtboard removeFromParent]
-
-  return assetsPage;
-}
-
-function addLayerToAssetsPage(layer,assetsPage){
+function addLayerToAssetsPage(layer, assetsPage) {
   if (is_group(layer) && should_become_view(layer)) {
-    var styles = {}
-    assetsPage.addLayer(layer)
+    var styles = {};
+    assetsPage.addLayer(layer);
 
-    layer.style().contextSettings().opacity = 1
+    layer.style().contextSettings().opacity = 1;
 
-    var rect = [GKRect rectWithRect:[layer rectByAccountingForStyleSize:[[layer absoluteRect] rect]]]
-    var layerFrameHeightWithStyle = [rect height]
-    var orginalRect = [GKRect rectWithRect:[[layer absoluteRect] rect]]
-    var layerFrameHeight = [orginalRect height]
+    var rect = [GKRect rectWithRect:[layer rectByAccountingForStyleSize:[[layer absoluteRect] rect]]],
+        layerFrameHeightWithStyle = [rect height],
+        orginalRect = [GKRect rectWithRect:[[layer absoluteRect] rect]],
+        layerFrameHeight = [orginalRect height]
 
     log('height with style '+layerFrameHeightWithStyle)
     
     var label = assetsPage.addLayerOfType("text");
-    var layerName = (layer.name()) ? layer.name() : 'Undefined layer';
-    label.setName("label for "+layerName);
-    label.fontSize = 11;
-    label.fontPostscriptName = "Lucida Grande"
+    var layerName = [layer name] || "Undefined layer";
+    [label setName:"label for " + layerName];
+    [label setStringValue:layerName];
+    [label setFontSize:11];
+    [label setFontPostscriptName:"Lucida Grande"];
+
     var fontColor = [[MSColor alloc] init];
     [fontColor setRed:0.45];
     [fontColor setGreen:0.45];
     [fontColor setBlue:0.45];
     [fontColor setAlpha:1];
+    [label setTextColor:fontColor];
 
-    label.textColor = fontColor
+    labelFrame = [label frame];
+    [labelFrame setY:AssetsOffset + 30];
 
-    label.setStringValue(layerName)
-    labelFrame = label.frame()
-    labelFrame.y = AssetsOffset + 30
+    layerFrame = [layer frame];
+    [layerFrame setX: 0];
+    [layerFrame setY:AssetsOffset + 48 + (layerFrameHeightWithStyle - layerFrameHeight)];
 
-    layerFrame = layer.frame()
-    layerFrame.x = 0
-    layerFrame.y = AssetsOffset + 48 + (layerFrameHeightWithStyle-layerFrameHeight)
-
-    AssetsOffset += layerFrameHeightWithStyle + 56
+    AssetsOffset += layerFrameHeightWithStyle + 56;
 
     /* TODO: When using CSS, remove the shadows from images
     var shadowObjects = [[layer style] shadows]
@@ -294,20 +293,20 @@ function addLayerToAssetsPage(layer,assetsPage){
     
     var sublayers = [layer layers];
 
-    for (var sub=([sublayers count] - 1); sub >= 0; sub--) {
+    for (var sub = ([sublayers count] - 1); sub >= 0; sub--) {
       var current = [sublayers objectAtIndex:sub];
-      if(is_group(current) && should_become_view(current)){
-        current.removeFromParent()
-        addLayerToAssetsPage(current,assetsPage)
+      if (is_group(current) && should_become_view(current)) {
+        [current removeFromParent];
+        addLayerToAssetsPage(current, assetsPage);
       }
-      if(current.hasClippingMask()) {
-        [current setHasClippingMask:false]
-        var maskParent = current.parentGroup();
-        var maskParentFrame = maskParent.frame();
-        maskParent.resizeRoot()
-        maskParentFrame.x = 0
-        AssetsOffset += maskParentFrame.height() - layerFrameHeightWithStyle
-        [current setHasClippingMask:true]
+      if (current.hasClippingMask()) {
+        [current setHasClippingMask:false];
+        var maskParent = [current parentGroup];
+        var maskParentFrame = [maskParent frame];
+        [maskParent resizeRoot];
+        [maskParentFrame setX:0];
+        AssetsOffset += maskParentFrame.height() - layerFrameHeightWithStyle;
+        [current setHasClippingMask:true];
       }
     }
 
