@@ -31,7 +31,9 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+
 var AppSandboxFileAccessPersist = {
+
   keyForBookmarkDataForURL: function(url) {
     log("AppSandboxFileAccessPersist.keyForBookmarkDataForURL("+url+")")
     var urlStr = [url absoluteString];
@@ -44,7 +46,7 @@ var AppSandboxFileAccessPersist = {
 
     // loop through the bookmarks one path at a time down the URL
     var subUrl = url;
-    while ([subUrl path].length() > 1) { // give up when only '/' is left in the path
+    while ([[subUrl path] count] > 1) { // give up when only '/' is left in the path
       var key = AppSandboxFileAccessPersist.keyForBookmarkDataForURL(subUrl);
       var bookmark = [defaults dataForKey:key];
       if (bookmark) { // if a bookmark is found, return it
@@ -55,6 +57,7 @@ var AppSandboxFileAccessPersist = {
     // no bookmarks for the URL, or parent to the URL were found
     return nil;
   },
+
   setBookmarkData: function(data, url) {
     log("AppSandboxFileAccessPersist.setBookmarkData")
     log("data: " + data)
@@ -84,7 +87,7 @@ var AppSandboxFileAccess = {
     // check that the url exists, if it doesn't, find the parent path of the url that does exist and ask permission for that
     var fileManager = [NSFileManager defaultManager];
     var path = [url path];
-    while (path.length() > 1) { // give up when only '/' is left in the path or if we get to a path that exists
+    while ([path count] > 1) { // give up when only '/' is left in the path or if we get to a path that exists
       if ([fileManager fileExistsAtPath:path]) {
         break;
       }
@@ -113,6 +116,7 @@ var AppSandboxFileAccess = {
     }
     return allowedUrl;
   },
+
   persistPermissionPath: function(path) {
     this.persistPermissionURL([NSURL fileURLWithPath:path]);
   },
@@ -157,6 +161,7 @@ var AppSandboxFileAccess = {
       log("No bookmark data found")
     }
 
+
     // if allowed url is nil, we need to ask the user for permission
     if (!allowedUrl) {
       allowedUrl = AppSandboxFileAccess.askPermissionForUrl(fileUrl);
@@ -193,3 +198,8 @@ var sandboxAccess = AppSandboxFileAccess.init({
 if (in_sandbox()) {
   [[NSApplication sharedApplication] displayDialog:"Please use this plugin with Sketch Beta. You can search 'Sketch Beta' in Google to download it.\n\n(Or manually copy framer.js info the framer folder)." withTitle:"Sketch Framer known bugs"]
 }
+
+
+
+
+
