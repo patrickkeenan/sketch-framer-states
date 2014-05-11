@@ -18,7 +18,7 @@ var document_path = [[doc fileURL] path].split([doc displayName])[0],
     states_metadata = {},
     layerNames ={},
     assetsPage,
-    framerjs_url = "http://rawgit.com/koenbok/Framer/master/build/framer.js",
+    framerjs_url = "https://raw.githubusercontent.com/koenbok/FramerExamples/master/State%20Machine%20-%20Basics.framer/framer/framer.js",
     ASSETS_PAGE_NAME = "FramerComponents";
 
 function main() {
@@ -69,6 +69,27 @@ function main() {
     create_folder(target_folder);
     create_folder(framer_folder);
     create_files(focusPage)
+
+    // Get JS files from Github
+    var task = [[NSTask alloc] init],
+        argsArray = [NSArray arrayWithObjects:"-O", framerjs_url, nil];
+    [task setCurrentDirectoryPath:framer_folder];
+    [task setLaunchPath:"/usr/bin/curl"];
+    [task setArguments:argsArray];
+    [task launch];
+
+    // Get library files if one if configured and isn't yet downloaded
+    if(FramerLibraryUrl) {
+      if(![file_manager fileExistsAtPath:(framer_folder + "/" + FramerLibraryFileName)]) {
+        var task2 = [[NSTask alloc] init],
+            argsArray = [NSArray arrayWithObjects:"-O", FramerLibraryUrl, nil];
+        [task2 setCurrentDirectoryPath:framer_folder];
+        [task2 setLaunchPath:"/usr/bin/curl"];
+        [task2 setArguments:argsArray];
+        [task2 launch];
+      }
+    }
+    
 
     [doc setCurrentPage:focusPage]
     [doc showMessage: "Sketch Framer: Project exported to “" + target_folder + "”"];

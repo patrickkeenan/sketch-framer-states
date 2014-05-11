@@ -184,21 +184,53 @@ function major_version() {
 }
 
 function export_layer(layer) {
+
   var layerClass = [layer class];
   var layerName = [layer name];
-  //var layerRect = [layer rectByAccountingForStyleSize:[[layer absoluteRect] rect]]
-  log("Exporting <" + layerName + ">");
 
-  var filename = images_folder + "/" + sanitize_filename(layerName) + ".png";
+  if (should_ignore_layer(layer)) {
+    log("Ignoring <" + layerName + "> of type <" + layerClass + "> ");
+    return;
+  }
 
-  var slice = [MSSlice sliceWithRect:[[layer absoluteRect] rect] scale:1];
+  if(should_become_view(layer)){
+    log("Processing <" + layerName + "> of type <" + layerClass + "> ");
+    // If layer is a group, do:
 
-  if (in_sandbox()) {
-    sandboxAccess.accessFilePath_withBlock_persistPermission(target_folder, function(){
+    // temporarily show it
+    if (![layer isVisible]) {
+      [layer setName:layerName + "@@hidden"]
+    }
+    [layer setIsVisible:true];
+
+    //var layerRect = [layer rectByAccountingForStyleSize:[[layer absoluteRect] rect]]
+    log("Exporting <" + layerName + ">");
+
+    var filename = images_folder + "/" + sanitize_filename(layerName) + ".png";
+
+    var slice = [MSSlice sliceWithRect:[[layer absoluteRect] rect] scale:1];
+
+    if (in_sandbox()) {
+      sandboxAccess.accessFilePath_withBlock_persistPermission(target_folder, function(){
+        [doc saveArtboardOrSlice:slice toFile:filename];
+      }, true)
+    } else {
       [doc saveArtboardOrSlice:slice toFile:filename];
-    }, true)
-  } else {
-    [doc saveArtboardOrSlice:slice toFile:filename];
+    }
+
+    if (layerName.indexOf("@@hidden") != -1) {
+      // If it was hidden, make it hidden again and fix the name
+      var _name = layerName.replace("@@hidden", "");
+      [layer setIsVisible:false];
+      [layer setName:_name];
+    }
+  }
+
+  if (layerName.indexOf("@@mask") != -1) {
+    var _name = layerName.replace("@@mask", "");
+    log("Re-enabling mask " + _name);
+    [layer setHasClippingMask:true];
+    [layer setName:_name];
   }
   
 }
@@ -492,7 +524,7 @@ function process_layer_states(page, layer, artboardName, depth) {
     layerState.frame.opacity = [[layerStyle contextSettings] opacity];
     layerState.frame.rotationZ = [layer rotation];
     
-    layerState.style = {}
+    layerState.style = {backgroundColor:'transparent'}
 
     var styles = extract_style_from(layer)
     for(var attr in styles){
