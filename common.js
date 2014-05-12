@@ -280,8 +280,8 @@ function findAssetsPage() {
   }
 }
 
-function updateAssetsPage(currentArtboards) {
-  assetsPage = findAssetsPage()
+function updateAssetsPage(artboards) {
+  var assetsPage = findAssetsPage()
   if (assetsPage) {
     [doc removePage:assetsPage];
   }
@@ -289,28 +289,26 @@ function updateAssetsPage(currentArtboards) {
   assetsPage = [doc addBlankPage];
   [assetsPage setName:ASSETS_PAGE_NAME];
 
-  var artboardCount = [currentArtboards count]
+  var artboardCount = [artboards count]
 
-  for (var artboardIndex = artboardCount-1; artboardIndex >= 0; artboardIndex-- ){
-    var thisArtboard = [currentArtboards objectAtIndex:artboardIndex]
-    var artboardName = sanitize_filename([thisArtboard name]);
+  for (var artboardIndex = [artboards count] - 1; artboardIndex >= 0; artboardIndex--) {
+    var artboard = [artboards objectAtIndex:artboardIndex];
+    var artboardName = sanitize_filename([artboard name]);
 
-    var copyOfArtboard = [thisArtboard copy]
+    var copyOfArtboard = [artboard copy];
 
-    assetsPage.addLayer(copyOfArtboard)
+    assetsPage.addLayer(copyOfArtboard);
     
-    var copyOfArtboardLayers = [copyOfArtboard layers]
+    var copyOfArtboardLayers = [copyOfArtboard layers];
 
-    for(var l=0; l < [copyOfArtboardLayers count]; l++){
-      var currentLayer = [copyOfArtboardLayers objectAtIndex:l]
-      if(is_new_layer(currentLayer)){
-        addLayerToAssetsPage(currentLayer,assetsPage)
-
+    for (var l = 0; l < [copyOfArtboardLayers count]; l++) {
+      var layer = [copyOfArtboardLayers objectAtIndex:l];
+      if (is_new_layer(layer)) {
+        addLayerToAssetsPage(layer, assetsPage);
       }
     }
 
-    [copyOfArtboard removeFromParent]
-    
+    [copyOfArtboard removeFromParent];
   }
 
   return assetsPage;
@@ -318,42 +316,43 @@ function updateAssetsPage(currentArtboards) {
 
 function addLayerToAssetsPage(layer, assetsPage) {
   if (is_group(layer) && should_become_view(layer)) {
-    var styles = {}
-    assetsPage.addLayer(layer)
+    var styles = {};
+    assetsPage.addLayer(layer);
 
 
-    var layerContext = [[layer style] contextSettings] 
-    [layerContext setOpacity:1]
-    [layer setIsVisible:true]
+    var layerContext = [[layer style] contextSettings];
+    [layerContext setOpacity:1];
+    [layer setIsVisible:true];
 
-    var rect = [layer absoluteRect]
-    var layerFrameHeightWithStyle = [rect height]
-    var orginalRect = [GKRect rectWithRect:[[layer absoluteRect] rect]]
-    var layerFrameHeight = [orginalRect height]
+    var rect = [layer absoluteRect];
+    var layerFrameHeightWithStyle = [rect height];
+    var orginalRect = [GKRect rectWithRect:[[layer absoluteRect] rect]];
+    var layerFrameHeight = [orginalRect height];
 
     //log('height with style '+layerFrameHeightWithStyle)
     
     var label = assetsPage.addLayerOfType("text");
-    var layerName = [layer name]
-    if(!layerName) layerName = 'Undefined layer';
-    label.setName("label for "+layerName);
-    label.fontSize = 11;
-    label.fontPostscriptName = "Lucida Grande"
+    var layerName = [layer name] || "Undefined layer";
+    [label setName:"label for " + layerName];
+    [label setStringValue:layerName];
+    [label setFontSize:11];
+    [label setFontPostscriptName:"Lucida Grande"];
+
     var fontColor = [[MSColor alloc] init];
     [fontColor setRed:0.45];
     [fontColor setGreen:0.45];
     [fontColor setBlue:0.45];
     [fontColor setAlpha:1];
-    label.textColor = fontColor
-    label.setStringValue(layerName)
-    labelFrame = [label frame]
-    labelFrame.y = AssetsOffset + 30
+    [label setTextColor:fontColor];
 
-    layerFrame = [layer frame]
-    layerFrame.x = 0
-    layerFrame.y = AssetsOffset + 48 + (layerFrameHeightWithStyle-layerFrameHeight)
+    labelFrame = [label frame];
+    [labelFrame setY:AssetsOffset + 30];
 
-    AssetsOffset += layerFrameHeightWithStyle + 56
+    layerFrame = [layer frame];
+    [layerFrame setX: 0];
+    [layerFrame setY:AssetsOffset + 48 + (layerFrameHeightWithStyle - layerFrameHeight)];
+
+    AssetsOffset += layerFrameHeightWithStyle + 56;
 
     /* TODO: When using CSS, remove the shadows from images
     var shadowObjects = [[layer style] shadows]
@@ -369,7 +368,7 @@ function addLayerToAssetsPage(layer, assetsPage) {
     
     var sublayers = [layer layers];
 
-    for (var sub=([sublayers count] - 1); sub >= 0; sub--) {
+    for (var sub = ([sublayers count] - 1); sub >= 0; sub--) {
       var current = [sublayers objectAtIndex:sub];
       log('adding '+current)
       if(!should_flatten_layer(layer) && is_group(current) && should_become_view(current)){
@@ -396,7 +395,7 @@ function addLayerToAssetsPage(layer, assetsPage) {
       //export_full_bitmap(page, layer,images_folder + "/" + sanitize_filename(layer.name()) + "-bitmap.png")
     }
     */
-    layerNames[layerName] = layer
+    layerNames[layerName] = layer;
   }
   
 }
