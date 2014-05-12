@@ -24,6 +24,7 @@ function create_folder(path) {
 function is_new_layer(layer){
   var newRect = [layer absoluteRect]
   var newSize = [newRect width] + [newRect height]
+  
   for(var i in layerNames){
     var compareLayer = layerNames[i]
     var compareRect = [compareLayer absoluteRect]
@@ -176,11 +177,6 @@ function lookForCSSBoxBackground(layer){
     }
   }
   return CSSBoxBackground;
-}
-
-function major_version() {
-  var version = [NSApp applicationVersion]
-  return version.substr(0,1);
 }
 
 function export_layer(layer) {
