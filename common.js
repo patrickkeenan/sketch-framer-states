@@ -120,8 +120,8 @@ function extract_shadow_from(layer) {
     var shadowColor='rgba('
       +Math.round([shadowObjectColor red]*255)+','
       +Math.round([shadowObjectColor green]*255)+','
-      +Math.round([shadowObject blue]*255)+','
-      +[shadowObject alpha]+')'
+      +Math.round([shadowObjectColor blue]*255)+','
+      +[shadowObjectColor alpha]+')'
     CSSShadow = [shadowObject offsetX]+'px '+[shadowObject offsetY]+'px '+[shadowObject blurRadius]+'px '+[shadowObject spread]+'px '+shadowColor;
     
     //layer.style().shadows().removeStylePart(shadowObject)
