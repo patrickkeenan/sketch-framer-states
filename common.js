@@ -24,7 +24,7 @@ function create_folder(path) {
 function is_new_layer(layer){
   var newRect = [layer absoluteRect]
   var newSize = [newRect width] + [newRect height]
-  
+
   for(var i in layerNames){
     var compareLayer = layerNames[i]
     var compareRect = [compareLayer absoluteRect]
@@ -437,7 +437,7 @@ function metadata_for(layer) {
   return r
 }
 
-function process_layer_states(page, layer, artboardName, depth) {
+function process_layer_states(layer, artboardName, depth) {
   depth += 1
   
   // Get layer data
@@ -534,7 +534,7 @@ function process_layer_states(page, layer, artboardName, depth) {
         }else{
           if(!is_bitmap(current)){
             log('not a mask'+current+' '+is_bitmap(layer))
-            process_layer_states(page,current,artboardName,depth+1);  
+            process_layer_states(current,artboardName,depth+1);  
           }
           
         }
@@ -561,7 +561,7 @@ function process_layer_states(page, layer, artboardName, depth) {
 
 }
 
-function create_files(page){
+function create_files() {
   log("create_files("+states_metadata+")")
   var JSON_States = JSON.stringify(states_metadata,null,2)
   JSON_States=JSON_States.replace(/"(\w+)"\s*:/g, '$1:');

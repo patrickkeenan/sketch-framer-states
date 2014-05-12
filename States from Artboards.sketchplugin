@@ -21,88 +21,76 @@ var document_path = [[doc fileURL] path].split([doc displayName])[0],
     framerjs_url = "https://raw.githubusercontent.com/koenbok/FramerExamples/master/State%20Machine%20-%20Basics.framer/framer/framer.js",
     ASSETS_PAGE_NAME = "FramerComponents";
 
+function download_file(url) {
+  var task = [[NSTask alloc] init],
+      argsArray = [NSArray arrayWithObjects:"-O", url, nil];
+  [task setCurrentDirectoryPath:framer_folder];
+  [task setLaunchPath:"/usr/bin/curl"];
+  [task setArguments:argsArray];
+  [task launch];
+}
+
+function generate_states(artboards) {
+  for (var artboardIndex = [artboards count] - 1; artboardIndex >= 0; artboardIndex--) {
+    var artboard = [artboards objectAtIndex:artboardIndex]
+    var artboardName = sanitize_filename([artboard name]);
+    var artboardLayers = [artboard layers];
+
+    states_metadata[artboardName] = {};
+
+    log('checking artboard ' + artboardName + ' ' + [artboardLayers count]);
+
+    for (var layerIndex = 0; layerIndex < [artboardLayers count]; layerIndex++) {
+      var layer = [artboardLayers objectAtIndex:layerIndex];
+      var layerName = sanitize_filename([layer name]);
+
+      log('checking first layer '+ layerName);
+
+      process_layer_states(layer, artboardName, 0);
+    }
+
+  }
+}
+
+function export_layers() {
+  for (var i in layerNames){
+    export_layer(layerNames[i]);
+  }
+}
+
 function main() {
 
   log('########################################################################');
   
-  var focusPage = [doc currentPage]
-  var currentArtboards = [focusPage artboards]
-  var currentArtboard = [currentArtboards lastObject]
-  var artboardCount = [currentArtboards count]
-  var allPages = [doc pages];
+  var page = [doc currentPage];
+  var artboards = [page artboards];
 
-  //exportFramerComponents();
-  //BUG: Maybe it needs to be children rather than layers?
-  updateAssetsPage(currentArtboards);
-  for(var i in layerNames){
-    export_layer(layerNames[i]);  
-  }
-  
-
-  if(artboardCount > 0){
-    
-    for (var artboardIndex = artboardCount-1; artboardIndex >= 0; artboardIndex-- ){
-      var thisArtboard = [currentArtboards objectAtIndex:artboardIndex]
-      var artboardName = sanitize_filename([thisArtboard name]);
-
-      
-      states_metadata[artboardName] = {}
-      var artboardLayers = [thisArtboard layers]
-      var layerCount = [artboardLayers count]
-
-      log('checking artboard '+artboardName+' '+layerCount)
-
-      for (var layerIndex = 0;layerIndex < layerCount ; layerIndex++){
-
-        var thisLayer = [artboardLayers objectAtIndex:layerIndex]
-        var thisLayerName = sanitize_filename([thisLayer name])
-
-        log('checking first layer '+thisLayerName)
-
-        process_layer_states(focusPage, thisLayer, artboardName, 0);
-      }
-
-    }
-
-
-    // Create folders
-    create_folder(target_folder);
-    create_folder(framer_folder);
-    create_files(focusPage)
-
-    // Get JS files from Github
-    var task = [[NSTask alloc] init],
-        argsArray = [NSArray arrayWithObjects:"-O", framerjs_url, nil];
-    [task setCurrentDirectoryPath:framer_folder];
-    [task setLaunchPath:"/usr/bin/curl"];
-    [task setArguments:argsArray];
-    [task launch];
-
-    // Get library files if one if configured and isn't yet downloaded
-    if(FramerLibraryUrl) {
-      if(![file_manager fileExistsAtPath:(framer_folder + "/" + FramerLibraryFileName)]) {
-        var task2 = [[NSTask alloc] init],
-            argsArray = [NSArray arrayWithObjects:"-O", FramerLibraryUrl, nil];
-        [task2 setCurrentDirectoryPath:framer_folder];
-        [task2 setLaunchPath:"/usr/bin/curl"];
-        [task2 setArguments:argsArray];
-        [task2 launch];
-      }
-    }
-    
-
-    [doc setCurrentPage:focusPage]
-    [doc showMessage: "Sketch Framer: Project exported to “" + target_folder + "”"];
-    
-  }else{
+  if (![artboards count]) {
     [doc showMessage: "Sketch Framer: You must have multiple artboards for this to work"];
+    return;
   }
 
+  //BUG: Maybe it needs to be children rather than layers?
+  updateAssetsPage(artboards);
+  export_layers();
+  
+  generate_states(artboards);
+
+  // Create folders
+  create_folder(target_folder);
+  create_folder(framer_folder);
+  create_files();
+
+  // Download framer.js
+  download_file(framerjs_url);
+
+  // Download library file if one is configured and isn't yet downloaded
+  if (FramerLibraryUrl && ![file_manager fileExistsAtPath:(framer_folder + "/" + FramerLibraryFileName)]) {
+    download_file(FramerLibraryUrl);
+  }
+
+  [doc setCurrentPage:page]
+  [doc showMessage: "Sketch Framer: Project exported to “" + target_folder + "”"];
 }
 
 main();
-
-
-
-
-
