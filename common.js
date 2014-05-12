@@ -197,10 +197,6 @@ function export_layer(layer) {
     log("Processing <" + layerName + "> of type <" + layerClass + "> ");
     // If layer is a group, do:
 
-    // temporarily show it
-    if (![layer isVisible]) {
-      [layer setName:layerName + "@@hidden"]
-    }
     [layer setIsVisible:true];
 
     //var layerRect = [layer rectByAccountingForStyleSize:[[layer absoluteRect] rect]]
@@ -218,12 +214,6 @@ function export_layer(layer) {
       [doc saveArtboardOrSlice:slice toFile:filename];
     }
 
-    if (layerName.indexOf("@@hidden") != -1) {
-      // If it was hidden, make it hidden again and fix the name
-      var _name = layerName.replace("@@hidden", "");
-      [layer setIsVisible:false];
-      [layer setName:_name];
-    }
   }
 
   if (layerName.indexOf("@@mask") != -1) {
@@ -284,40 +274,6 @@ function calculate_real_position_for(layer) {
   }
 }
 
-
-
-function extract_metadata_from(layer) {
-  var maskFrame = mask_bounds(layer);
-  var layerFrame = metadata_for(layer);
-  var layerName = [layer name];
-  // call maskframe first so it disables the mask, so we can get correct layerframe
-
-  //metadata.id = get_next_id(); // FIXME
-
-  var metadata = {
-    name: sanitize_filename([layer name]),
-    layerFrame: layerFrame,
-    maskFrame: maskFrame
-  };
-
-  if(has_art(layer)) {
-    metadata.image = {
-      path: "images/" + sanitize_filename([layer name]) + ".png",
-      frame: layerFrame
-    };
-    metadata.imageType = "png";
-    // TODO: Find out how the modification hash is calculated in Framer.app
-    // metadata.modification = new Date();
-  }
-
-  // if it was invisible, mark this in the metadata as well
-  if (layerName.indexOf("@@hidden") != -1) {
-    metadata.visible = false
-  }
-
-  return metadata;
-}
-
 function findAssetsPage() {
   assetsPage = false
   var allPages = [doc pages];
@@ -371,8 +327,10 @@ function addLayerToAssetsPage(layer, assetsPage) {
     var styles = {}
     assetsPage.addLayer(layer)
 
+
     var layerContext = [[layer style] contextSettings] 
     [layerContext setOpacity:1]
+    [layer setIsVisible:true]
 
     var rect = [layer absoluteRect]
     var layerFrameHeightWithStyle = [rect height]
@@ -392,9 +350,7 @@ function addLayerToAssetsPage(layer, assetsPage) {
     [fontColor setGreen:0.45];
     [fontColor setBlue:0.45];
     [fontColor setAlpha:1];
-
     label.textColor = fontColor
-
     label.setStringValue(layerName)
     labelFrame = [label frame]
     labelFrame.y = AssetsOffset + 30
@@ -523,6 +479,9 @@ function process_layer_states(page, layer, artboardName, depth) {
     }
     layerState.frame.opacity = [[layerStyle contextSettings] opacity];
     layerState.frame.rotationZ = [layer rotation];
+    //layerState.frame.visible = [layer isVisible];
+    if([layer isVisible] == 0) layerState.visible = false;
+    else layerState.visible = true;
     
     layerState.style = {backgroundColor:'transparent'}
 
