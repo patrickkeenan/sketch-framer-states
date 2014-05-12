@@ -271,15 +271,13 @@ function calculate_real_position_for(layer) {
 }
 
 function findAssetsPage() {
-  assetsPage = false
-  var allPages = [doc pages];
-  for (var p = 0; p < [allPages count]; p++) {
-    var currentPage = [allPages objectAtIndex:p];
-    if ([currentPage name] == ASSETS_PAGE_NAME) {
-      assetsPage = currentPage;
+  var pages = [doc pages];
+  for (var p = 0; p < [pages count]; p++) {
+    var page = [pages objectAtIndex:p];
+    if ([page name] == ASSETS_PAGE_NAME) {
+      return page;
     }
   }
-  return assetsPage;
 }
 
 function updateAssetsPage(currentArtboards) {
