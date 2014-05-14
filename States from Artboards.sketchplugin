@@ -21,6 +21,32 @@ var document_path = [[doc fileURL] path].split([doc displayName])[0],
     framerjs_url = "https://raw.githubusercontent.com/koenbok/FramerExamples/master/State%20Machine%20-%20Basics.framer/framer/framer.js",
     ASSETS_PAGE_NAME = "FramerComponents";
 
+function create_folder(path) {
+  log('creating folder ' + path);
+  if (in_sandbox()) {
+    sandboxAccess.accessFilePath_withBlock_persistPermission(path, function(){
+      [file_manager createDirectoryAtPath:path withIntermediateDirectories:true attributes:nil error:nil];
+    }, true)
+  } else {
+    [file_manager createDirectoryAtPath:path withIntermediateDirectories:true attributes:nil error:nil];
+  }
+}
+
+function create_file_from_string(filename, the_string, overwrite) {
+  var path = [@"" stringByAppendingString:filename],
+      str = [@"" stringByAppendingString:the_string];
+
+  if (!overwrite && [file_manager fileExistsAtPath:filename]) { return; }
+
+  if (in_sandbox()) {
+    sandboxAccess.accessFilePath_withBlock_persistPermission(filename, function(){
+      [str writeToFile:path atomically:true encoding:NSUTF8StringEncoding error:null];
+    }, true)
+  } else {
+    [str writeToFile:path atomically:true encoding:NSUTF8StringEncoding error:null];
+  }
+}
+
 function download_file(url) {
   var filename = url.replace(/^.*(\\|\/|\:)/, ''),
       path = framer_folder + '/' + filename;
@@ -31,6 +57,29 @@ function download_file(url) {
   [task setLaunchPath:"/usr/bin/curl"];
   [task setArguments:argsArray];
   [task launch];
+}
+
+function create_files() {
+  log("create_files");
+  create_folder(target_folder);
+  create_folder(framer_folder);
+
+  // State data sheet
+  var JSON_States = JSON.stringify(states_metadata, null, 2).replace(/"(\w+)"\s*:/g, '$1:'),
+      file_path = framer_folder + "/states." + document_name + ".js",
+      file_contents = "window.FramerStatesSheet = " + JSON_States +"\n";
+  create_file_from_string(file_path, file_contents, true);
+
+  // Local template files
+  create_file_from_string(framer_folder + "/framer.states.js", FramerStatesJSContents);
+  create_file_from_string(target_folder + "/" + FramerScriptFileName, FramerScriptFileContents);
+  create_file_from_string(target_folder + "/index.html",  FramerIndexFileContents.replace("{{ views }}",'\n\t\t<script src="framer/states.' + document_name + '.js"></script>'));
+
+  // Online template files
+  download_file(framerjs_url);
+  if (FramerLibraryUrl) {
+    download_file(FramerLibraryUrl);
+  }
 }
 
 function generate_states(artboards) {
@@ -79,18 +128,7 @@ function main() {
   
   generate_states(artboards);
 
-  // Create folders
-  create_folder(target_folder);
-  create_folder(framer_folder);
   create_files();
-
-  // Download framer.js
-  download_file(framerjs_url);
-
-  // Download library file if one is configured
-  if (FramerLibraryUrl) {
-    download_file(FramerLibraryUrl);
-  }
 
   [doc setCurrentPage:page]
   [doc showMessage: "Sketch Framer: Project exported to “" + target_folder + "”"];
