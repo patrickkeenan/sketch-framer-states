@@ -198,11 +198,6 @@ function export_layer(layer) {
   
 }
 
-function get_next_id() {
-  return ++object_id;
-}
-
-
 function mask_bounds(layer) {
   var sublayers = [layer layers];
   var effective_mask = null;
