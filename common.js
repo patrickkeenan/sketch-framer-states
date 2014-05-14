@@ -43,9 +43,8 @@ function should_ignore_layer(layer) {
 }
 
 function sanitize_filename(name){
-  return name.replace(/(\s|:|\/)/g ,"_").replace(/__/g,"_").replace("*","").replace("+","").replace("&","").replace("@@hidden","");
+  return name.replace(/(\s|:|\/)/g ,"_").replace(/__/g,"_").replace("*","").replace("+","").replace("&","");
 }
-
 
 function has_art(layer) {
   // return true;
