@@ -1,26 +1,3 @@
-function save_file_from_string(filename,the_string) {
-  var path = [@"" stringByAppendingString:filename],
-      str = [@"" stringByAppendingString:the_string];
-
-  if (in_sandbox()) {
-    sandboxAccess.accessFilePath_withBlock_persistPermission(filename, function(){
-      [str writeToFile:path atomically:true encoding:NSUTF8StringEncoding error:null];
-    }, true)
-  } else {
-    [str writeToFile:path atomically:true encoding:NSUTF8StringEncoding error:null];
-  }
-}
-
-function create_folder(path) {
-  log('creating folder ' + path);
-  if (in_sandbox()) {
-    sandboxAccess.accessFilePath_withBlock_persistPermission(path, function(){
-      [file_manager createDirectoryAtPath:path withIntermediateDirectories:true attributes:nil error:nil];
-    }, true)
-  } else {
-    [file_manager createDirectoryAtPath:path withIntermediateDirectories:true attributes:nil error:nil];
-  }
-}
 function is_new_layer(layer){
   var newRect = [layer absoluteRect]
   var newSize = [newRect width] + [newRect height]
@@ -555,35 +532,6 @@ function process_layer_states(layer, artboardName, depth) {
   //   //export_full_bitmap(page, layer,images_folder + "/" + sanitize_filename(layer.name()) + "-bitmap.png")
   // }
   
-
-}
-
-function create_files() {
-  log("create_files("+states_metadata+")")
-  var JSON_States = JSON.stringify(states_metadata,null,2)
-  JSON_States=JSON_States.replace(/"(\w+)"\s*:/g, '$1:');
-
-  file_path = framer_folder + "/states." + document_name + ".js";
-  file_contents = "window.FramerStatesSheet = " + JSON_States +"\n";
-  save_file_from_string(file_path,file_contents);
-
-  try {
-    // Save JS files from templates:
-    save_file_from_string(framer_folder + "/framer.states.js", FramerStatesJSContents);
-    //save_file_from_string(framer_folder + "/framer.js", Framer2Source);
-    if(![file_manager fileExistsAtPath:(target_folder + "/" + FramerScriptFileName)]) {
-      save_file_from_string(target_folder + "/" + FramerScriptFileName, FramerScriptFileContents);
-    }
-  } catch(e) {
-    log(e)
-  }
-
-  // Create HTML if it's the first time we're exporting
-  log('checking for index.html')
-  if(![file_manager fileExistsAtPath:(target_folder + "/index.html")]) {
-
-    save_file_from_string(target_folder + "/index.html",  FramerIndexFileContents.replace("{{ views }}",'\n\t\t<script src="framer/states.' + document_name + '.js"></script>'));
-  }
 
 }
 
