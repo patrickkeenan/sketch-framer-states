@@ -22,6 +22,9 @@ var document_path = [[doc fileURL] path].split([doc displayName])[0],
     ASSETS_PAGE_NAME = "FramerComponents";
 
 function download_file(url) {
+  var filename = url.replace(/^.*(\\|\/|\:)/, ''),
+      path = framer_folder + '/' + filename;
+  if ([file_manager fileExistsAtPath:path]) { return; }
   var task = [[NSTask alloc] init],
       argsArray = [NSArray arrayWithObjects:"-O", url, nil];
   [task setCurrentDirectoryPath:framer_folder];
@@ -84,8 +87,8 @@ function main() {
   // Download framer.js
   download_file(framerjs_url);
 
-  // Download library file if one is configured and isn't yet downloaded
-  if (FramerLibraryUrl && ![file_manager fileExistsAtPath:(framer_folder + "/" + FramerLibraryFileName)]) {
+  // Download library file if one is configured
+  if (FramerLibraryUrl) {
     download_file(FramerLibraryUrl);
   }
 
