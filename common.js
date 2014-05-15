@@ -1,29 +1,7 @@
-function save_file_from_string(filename,the_string) {
-  var path = [@"" stringByAppendingString:filename],
-      str = [@"" stringByAppendingString:the_string];
-
-  if (in_sandbox()) {
-    sandboxAccess.accessFilePath_withBlock_persistPermission(filename, function(){
-      [str writeToFile:path atomically:true encoding:NSUTF8StringEncoding error:null];
-    }, true)
-  } else {
-    [str writeToFile:path atomically:true encoding:NSUTF8StringEncoding error:null];
-  }
-}
-
-function create_folder(path) {
-  log('creating folder ' + path);
-  if (in_sandbox()) {
-    sandboxAccess.accessFilePath_withBlock_persistPermission(path, function(){
-      [file_manager createDirectoryAtPath:path withIntermediateDirectories:true attributes:nil error:nil];
-    }, true)
-  } else {
-    [file_manager createDirectoryAtPath:path withIntermediateDirectories:true attributes:nil error:nil];
-  }
-}
 function is_new_layer(layer){
   var newRect = [layer absoluteRect]
   var newSize = [newRect width] + [newRect height]
+
   for(var i in layerNames){
     var compareLayer = layerNames[i]
     var compareRect = [compareLayer absoluteRect]
@@ -120,8 +98,8 @@ function extract_shadow_from(layer) {
     var shadowColor='rgba('
       +Math.round([shadowObjectColor red]*255)+','
       +Math.round([shadowObjectColor green]*255)+','
-      +Math.round([shadowObject blue]*255)+','
-      +[shadowObject alpha]+')'
+      +Math.round([shadowObjectColor blue]*255)+','
+      +[shadowObjectColor alpha]+')'
     CSSShadow = [shadowObject offsetX]+'px '+[shadowObject offsetY]+'px '+[shadowObject blurRadius]+'px '+[shadowObject spread]+'px '+shadowColor;
     
     //layer.style().shadows().removeStylePart(shadowObject)
@@ -178,11 +156,6 @@ function lookForCSSBoxBackground(layer){
   return CSSBoxBackground;
 }
 
-function major_version() {
-  var version = [NSApp applicationVersion]
-  return version.substr(0,1);
-}
-
 function export_layer(layer) {
 
   var layerClass = [layer class];
@@ -224,11 +197,6 @@ function export_layer(layer) {
   }
   
 }
-
-function get_next_id() {
-  return ++object_id;
-}
-
 
 function mask_bounds(layer) {
   var sublayers = [layer layers];
@@ -275,19 +243,17 @@ function calculate_real_position_for(layer) {
 }
 
 function findAssetsPage() {
-  assetsPage = false
-  var allPages = [doc pages];
-  for (var p = 0; p < [allPages count]; p++) {
-    var currentPage = [allPages objectAtIndex:p];
-    if ([currentPage name] == ASSETS_PAGE_NAME) {
-      assetsPage = currentPage;
+  var pages = [doc pages];
+  for (var p = 0; p < [pages count]; p++) {
+    var page = [pages objectAtIndex:p];
+    if ([page name] == ASSETS_PAGE_NAME) {
+      return page;
     }
   }
-  return assetsPage;
 }
 
-function updateAssetsPage(currentArtboards) {
-  assetsPage = findAssetsPage()
+function updateAssetsPage(artboards) {
+  var assetsPage = findAssetsPage()
   if (assetsPage) {
     [doc removePage:assetsPage];
   }
@@ -295,28 +261,26 @@ function updateAssetsPage(currentArtboards) {
   assetsPage = [doc addBlankPage];
   [assetsPage setName:ASSETS_PAGE_NAME];
 
-  var artboardCount = [currentArtboards count]
+  var artboardCount = [artboards count]
 
-  for (var artboardIndex = artboardCount-1; artboardIndex >= 0; artboardIndex-- ){
-    var thisArtboard = [currentArtboards objectAtIndex:artboardIndex]
-    var artboardName = sanitize_filename([thisArtboard name]);
+  for (var artboardIndex = [artboards count] - 1; artboardIndex >= 0; artboardIndex--) {
+    var artboard = [artboards objectAtIndex:artboardIndex];
+    var artboardName = sanitize_filename([artboard name]);
 
-    var copyOfArtboard = [thisArtboard copy]
+    var copyOfArtboard = [artboard copy];
 
-    assetsPage.addLayer(copyOfArtboard)
+    assetsPage.addLayer(copyOfArtboard);
     
-    var copyOfArtboardLayers = [copyOfArtboard layers]
+    var copyOfArtboardLayers = [copyOfArtboard layers];
 
-    for(var l=0; l < [copyOfArtboardLayers count]; l++){
-      var currentLayer = [copyOfArtboardLayers objectAtIndex:l]
-      if(is_new_layer(currentLayer)){
-        addLayerToAssetsPage(currentLayer,assetsPage)
-
+    for (var l = 0; l < [copyOfArtboardLayers count]; l++) {
+      var layer = [copyOfArtboardLayers objectAtIndex:l];
+      if (is_new_layer(layer)) {
+        addLayerToAssetsPage(layer, assetsPage);
       }
     }
 
-    [copyOfArtboard removeFromParent]
-    
+    [copyOfArtboard removeFromParent];
   }
 
   return assetsPage;
@@ -324,42 +288,43 @@ function updateAssetsPage(currentArtboards) {
 
 function addLayerToAssetsPage(layer, assetsPage) {
   if (is_group(layer) && should_become_view(layer)) {
-    var styles = {}
-    assetsPage.addLayer(layer)
+    var styles = {};
+    assetsPage.addLayer(layer);
 
+    var layerContext = [[layer style] contextSettings];
+    [layerContext setOpacity:1];
+    [layer setIsVisible:true];
 
-    var layerContext = [[layer style] contextSettings] 
-    [layerContext setOpacity:1]
-    [layer setIsVisible:true]
-
-    var rect = [layer absoluteRect]
-    var layerFrameHeightWithStyle = [rect height]
-    var orginalRect = [GKRect rectWithRect:[[layer absoluteRect] rect]]
-    var layerFrameHeight = [orginalRect height]
+    var rect = [layer absoluteRect];
+    var layerFrameHeightWithStyle = [rect height];
+    var orginalRect = [GKRect rectWithRect:[[layer absoluteRect] rect]];
+    var layerFrameHeight = [orginalRect height];
 
     //log('height with style '+layerFrameHeightWithStyle)
     
     var label = assetsPage.addLayerOfType("text");
-    var layerName = [layer name]
-    if(!layerName) layerName = 'Undefined layer';
-    label.setName("label for "+layerName);
-    label.fontSize = 11;
-    label.fontPostscriptName = "Lucida Grande"
+    var layerName = [layer name] || "Undefined layer";
+    [label setName:"label for " + layerName];
+    [label setStringValue:layerName];
+    [label setFontSize:11];
+    [label setFontPostscriptName:"Lucida Grande"];
+
     var fontColor = [[MSColor alloc] init];
     [fontColor setRed:0.45];
     [fontColor setGreen:0.45];
     [fontColor setBlue:0.45];
     [fontColor setAlpha:1];
-    label.textColor = fontColor
-    label.setStringValue(layerName)
-    labelFrame = [label frame]
-    labelFrame.y = AssetsOffset + 30
 
-    layerFrame = [layer frame]
-    layerFrame.x = 0
-    layerFrame.y = AssetsOffset + 48 + (layerFrameHeightWithStyle-layerFrameHeight)
+    [label setTextColor:fontColor];
 
-    AssetsOffset += layerFrameHeightWithStyle + 56
+    labelFrame = [label frame];
+    [labelFrame setY:AssetsOffset + 30];
+
+    layerFrame = [layer frame];
+    [layerFrame setX: 0];
+    [layerFrame setY:AssetsOffset + 48 + (layerFrameHeightWithStyle - layerFrameHeight)];
+
+    AssetsOffset += layerFrameHeightWithStyle + 56;
 
     /* TODO: When using CSS, remove the shadows from images
     var shadowObjects = [[layer style] shadows]
@@ -375,7 +340,7 @@ function addLayerToAssetsPage(layer, assetsPage) {
     
     var sublayers = [layer layers];
 
-    for (var sub=([sublayers count] - 1); sub >= 0; sub--) {
+    for (var sub = ([sublayers count] - 1); sub >= 0; sub--) {
       var current = [sublayers objectAtIndex:sub];
       log('adding '+current)
       if(!should_flatten_layer(layer) && is_group(current) && should_become_view(current)){
@@ -402,7 +367,7 @@ function addLayerToAssetsPage(layer, assetsPage) {
       //export_full_bitmap(page, layer,images_folder + "/" + sanitize_filename(layer.name()) + "-bitmap.png")
     }
     */
-    layerNames[layerName] = layer
+    layerNames[layerName] = layer;
   }
   
 }
@@ -441,7 +406,7 @@ function metadata_for(layer) {
   return r
 }
 
-function process_layer_states(page, layer, artboardName, depth) {
+function process_layer_states(layer, artboardName, depth) {
   depth += 1
   
   // Get layer data
@@ -538,7 +503,7 @@ function process_layer_states(page, layer, artboardName, depth) {
         }else{
           if(!is_bitmap(current)){
             log('not a mask'+current+' '+is_bitmap(layer))
-            process_layer_states(page,current,artboardName,depth+1);  
+            process_layer_states(current,artboardName,depth+1);  
           }
           
         }
@@ -564,52 +529,3 @@ function process_layer_states(page, layer, artboardName, depth) {
   
 
 }
-
-function create_files(page){
-  log("create_files("+states_metadata+")")
-  var JSON_States = JSON.stringify(states_metadata,null,2)
-  JSON_States=JSON_States.replace(/"(\w+)"\s*:/g, '$1:');
-
-  file_path = framer_folder + "/states." + document_name + ".js";
-  file_contents = "window.FramerStatesSheet = " + JSON_States +"\n";
-  save_file_from_string(file_path,file_contents);
-
-  try {
-    // Save JS files from templates:
-    save_file_from_string(framer_folder + "/framer.states.js", FramerStatesJSContents);
-    //save_file_from_string(framer_folder + "/framer.js", Framer2Source);
-    if(![file_manager fileExistsAtPath:(target_folder + "/" + FramerScriptFileName)]) {
-      save_file_from_string(target_folder + "/" + FramerScriptFileName, FramerScriptFileContents);
-    }
-  } catch(e) {
-    log(e)
-  }
-
-  // Create HTML if it's the first time we're exporting
-  log('checking for index.html')
-  if(![file_manager fileExistsAtPath:(target_folder + "/index.html")]) {
-
-    save_file_from_string(target_folder + "/index.html",  FramerIndexFileContents.replace("{{ views }}",'\n\t\t<script src="framer/states.' + document_name + '.js"></script>'));
-  }
-
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

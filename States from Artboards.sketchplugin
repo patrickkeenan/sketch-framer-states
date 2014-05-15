@@ -10,99 +10,141 @@ var document_path = [[doc fileURL] path].split([doc displayName])[0],
     target_folder = document_path + document_name,
     images_folder = target_folder + "/images",
     framer_folder = target_folder + "/framer",
+    home_folder = NSHomeDirectory(),
     file_manager = [NSFileManager defaultManager],
-    object_id = 0,
     AssetsOffset = 0,
-    invisible_layers = [],
-    project_metadata = [],
     states_metadata = {},
     layerNames ={},
     assetsPage,
-    framerjs_url = "https://raw.githubusercontent.com/koenbok/FramerExamples/master/State%20Machine%20-%20Basics.framer/framer/framer.js",
+    framerjs_url = "https://raw.githubusercontent.com/koenbok/FramerExamples/master/Examples/Animation%20-%20Basics.framer/framer/framer.js",
     ASSETS_PAGE_NAME = "FramerComponents";
+
+function create_folder(path) {
+  log('creating folder ' + path);
+  if (in_sandbox()) {
+    sandboxAccess.accessFilePath_withBlock_persistPermission(path, function(){
+      [file_manager createDirectoryAtPath:path withIntermediateDirectories:true attributes:nil error:nil];
+    }, true)
+  } else {
+    [file_manager createDirectoryAtPath:path withIntermediateDirectories:true attributes:nil error:nil];
+  }
+}
+
+function create_file_from_string(filename, the_string, overwrite) {
+  var path = [@"" stringByAppendingString:filename],
+      str = [@"" stringByAppendingString:the_string];
+
+  if (!overwrite && [file_manager fileExistsAtPath:filename]) { return; }
+
+  if (in_sandbox()) {
+    sandboxAccess.accessFilePath_withBlock_persistPermission(filename, function(){
+      [str writeToFile:path atomically:true encoding:NSUTF8StringEncoding error:null];
+    }, true)
+  } else {
+    [str writeToFile:path atomically:true encoding:NSUTF8StringEncoding error:null];
+  }
+}
+function copy_template_from_plugin(filename,toFolder){
+  var project_framerjs_path = toFolder+'/'+filename;
+  var plugin_framerjs_path = home_folder+'/Library/Application Support/com.bohemiancoding.sketch3/Plugins/sketch-framer-states/templates/'+filename;
+
+  log('fm: testing path '+plugin_framerjs_path)
+  log('fm: looking for orginal file '+plugin_framerjs_path)
+  
+  if ([file_manager fileExistsAtPath:project_framerjs_path]) {
+    log("fm: yes, "+ filename +" already exists");
+  }else{
+    log("fm: no "+filename+" does not exist");
+    if ([file_manager copyItemAtPath:plugin_framerjs_path toPath:project_framerjs_path error:nil]) {
+        log("fm: success in copying over "+filename);
+    } else {
+        log("fm: error in trying to copy "+filename);
+    }
+  }
+}
+
+function download_file(url) {
+  var filename = url.replace(/^.*(\\|\/|\:)/, ''),
+      path = framer_folder + '/' + filename;
+  if ([file_manager fileExistsAtPath:path]) { return; }
+  var task = [[NSTask alloc] init],
+      argsArray = [NSArray arrayWithObjects:"-O", url, nil];
+  [task setCurrentDirectoryPath:framer_folder];
+  [task setLaunchPath:"/usr/bin/curl"];
+  [task setArguments:argsArray];
+  [task launch];
+}
+
+function create_files() {
+  log("create_files");
+  create_folder(target_folder);
+  create_folder(framer_folder);
+
+  // State data sheet
+  var JSON_States = JSON.stringify(states_metadata, null, 2).replace(/"(\w+)"\s*:/g, '$1:'),
+      file_path = framer_folder + "/states." + document_name + ".js",
+      file_contents = "window.FramerStatesSheet = " + JSON_States +"\n";
+  create_file_from_string(file_path, file_contents, true);
+
+  // Local template files
+  create_file_from_string(target_folder + "/index.html",  FramerIndexFileContents.replace("{{ views }}",'\n\t\t<script src="framer/states.' + document_name + '.js"></script>'));
+
+  copy_template_from_plugin('framer.js',framer_folder);
+  copy_template_from_plugin('framer.states.js',framer_folder);
+  copy_template_from_plugin('app.js',target_folder);
+
+}
+
+function generate_states(artboards) {
+  for (var artboardIndex = [artboards count] - 1; artboardIndex >= 0; artboardIndex--) {
+    var artboard = [artboards objectAtIndex:artboardIndex]
+    var artboardName = sanitize_filename([artboard name]);
+    var artboardLayers = [artboard layers];
+
+    states_metadata[artboardName] = {};
+
+    log('checking artboard ' + artboardName + ' ' + [artboardLayers count]);
+
+    for (var layerIndex = 0; layerIndex < [artboardLayers count]; layerIndex++) {
+      var layer = [artboardLayers objectAtIndex:layerIndex];
+      var layerName = sanitize_filename([layer name]);
+
+      log('checking first layer '+ layerName);
+
+      process_layer_states(layer, artboardName, 0);
+    }
+
+  }
+}
+
+function export_layers() {
+  for (var i in layerNames){
+    export_layer(layerNames[i]);
+  }
+}
 
 function main() {
 
   log('########################################################################');
   
-  var focusPage = [doc currentPage]
-  var currentArtboards = [focusPage artboards]
-  var currentArtboard = [currentArtboards lastObject]
-  var artboardCount = [currentArtboards count]
-  var allPages = [doc pages];
+  var page = [doc currentPage];
+  var artboards = [page artboards];
 
-  //exportFramerComponents();
-  //BUG: Maybe it needs to be children rather than layers?
-  updateAssetsPage(currentArtboards);
-  for(var i in layerNames){
-    export_layer(layerNames[i]);  
-  }
-  
-
-  if(artboardCount > 0){
-    
-    for (var artboardIndex = artboardCount-1; artboardIndex >= 0; artboardIndex-- ){
-      var thisArtboard = [currentArtboards objectAtIndex:artboardIndex]
-      var artboardName = sanitize_filename([thisArtboard name]);
-
-      
-      states_metadata[artboardName] = {}
-      var artboardLayers = [thisArtboard layers]
-      var layerCount = [artboardLayers count]
-
-      log('checking artboard '+artboardName+' '+layerCount)
-
-      for (var layerIndex = 0;layerIndex < layerCount ; layerIndex++){
-
-        var thisLayer = [artboardLayers objectAtIndex:layerIndex]
-        var thisLayerName = sanitize_filename([thisLayer name])
-
-        log('checking first layer '+thisLayerName)
-
-        process_layer_states(focusPage, thisLayer, artboardName, 0);
-      }
-
-    }
-
-
-    // Create folders
-    create_folder(target_folder);
-    create_folder(framer_folder);
-    create_files(focusPage)
-
-    // Get JS files from Github
-    var task = [[NSTask alloc] init],
-        argsArray = [NSArray arrayWithObjects:"-O", framerjs_url, nil];
-    [task setCurrentDirectoryPath:framer_folder];
-    [task setLaunchPath:"/usr/bin/curl"];
-    [task setArguments:argsArray];
-    [task launch];
-
-    // Get library files if one if configured and isn't yet downloaded
-    if(FramerLibraryUrl) {
-      if(![file_manager fileExistsAtPath:(framer_folder + "/" + FramerLibraryFileName)]) {
-        var task2 = [[NSTask alloc] init],
-            argsArray = [NSArray arrayWithObjects:"-O", FramerLibraryUrl, nil];
-        [task2 setCurrentDirectoryPath:framer_folder];
-        [task2 setLaunchPath:"/usr/bin/curl"];
-        [task2 setArguments:argsArray];
-        [task2 launch];
-      }
-    }
-    
-
-    [doc setCurrentPage:focusPage]
-    [doc showMessage: "Sketch Framer: Project exported to “" + target_folder + "”"];
-    
-  }else{
+  if (![artboards count]) {
     [doc showMessage: "Sketch Framer: You must have multiple artboards for this to work"];
+    return;
   }
 
+  //BUG: Maybe it needs to be children rather than layers?
+  updateAssetsPage(artboards);
+  export_layers();
+  
+  generate_states(artboards);
+
+  create_files();
+
+  [doc setCurrentPage:page]
+  [doc showMessage: "Sketch Framer: Project exported to “" + target_folder + "”"];
 }
 
 main();
-
-
-
-
-
