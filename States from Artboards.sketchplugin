@@ -5,6 +5,7 @@
 #import 'sandbox.js'
 #import 'common.js'
 
+
 var document_path = [[doc fileURL] path].split([doc displayName])[0],
     document_name = [doc displayName].replace(".sketch",""),
     target_folder = document_path + document_name,
@@ -93,34 +94,6 @@ function create_files() {
   copy_template_from_plugin('framer.states.js',framer_folder);
   copy_template_from_plugin('app.js',target_folder);
 
-  }
-}
-
-function create_file_from_string(filename, the_string, overwrite) {
-  var path = [@"" stringByAppendingString:filename],
-      str = [@"" stringByAppendingString:the_string];
-
-  if (!overwrite && [file_manager fileExistsAtPath:filename]) { return; }
-
-  if (in_sandbox()) {
-    sandboxAccess.accessFilePath_withBlock_persistPermission(filename, function(){
-      [str writeToFile:path atomically:true encoding:NSUTF8StringEncoding error:null];
-    }, true)
-  } else {
-    [str writeToFile:path atomically:true encoding:NSUTF8StringEncoding error:null];
-  }
-}
-
-function download_file(url) {
-  var filename = url.replace(/^.*(\\|\/|\:)/, ''),
-      path = framer_folder + '/' + filename;
-  if ([file_manager fileExistsAtPath:path]) { return; }
-  var task = [[NSTask alloc] init],
-      argsArray = [NSArray arrayWithObjects:"-O", url, nil];
-  [task setCurrentDirectoryPath:framer_folder];
-  [task setLaunchPath:"/usr/bin/curl"];
-  [task setArguments:argsArray];
-  [task launch];
 }
 
 function generate_states(artboards) {

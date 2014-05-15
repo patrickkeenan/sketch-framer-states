@@ -316,9 +316,6 @@ function addLayerToAssetsPage(layer, assetsPage) {
 
     [label setTextColor:fontColor];
 
-    labelFrame = [label frame];
-    [labelFrame setY:AssetsOffset + 30];
-
     layerFrame = [layer frame];
     [layerFrame setX: 0];
     [layerFrame setY:AssetsOffset + 48 + (layerFrameHeightWithStyle - layerFrameHeight)];
