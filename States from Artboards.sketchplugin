@@ -144,6 +144,8 @@ function main() {
 
   create_files();
 
+  if(!keep_asset_page) removeAssetsPage();
+
   [doc setCurrentPage:page]
   [doc showMessage: "Sketch Framer: Project exported to “" + target_folder + "”"];
 }

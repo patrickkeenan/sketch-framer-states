@@ -14,6 +14,7 @@
 
 var FramerLibraryUrl;
 var show_errors = true;
+var keep_asset_page = false;
 
 /* Don't touch the following. They are auto-generated based on the Library URL. */
 var extra_script_line;

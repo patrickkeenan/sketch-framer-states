@@ -6,18 +6,21 @@ function is_new_layer(layer){
     var compareLayer = layerNames[i]
     var compareRect = [compareLayer absoluteRect]
     var compareSize = [compareRect width] + [compareRect height]
-    log('is new: '+layer + ' '+ i)
+    
     if(i == [layer name]){
-      if(compareSize > newSize){
+      log('is new not: '+[layer name] + ' '+ i)
+      if(compareSize >= newSize){
+        log('new: but is smaller')
         return false  
       }else{
+        log('new: but is bigger')
         [compareLayer removeFromParent];
         layerNames[i] = layer;
         return true;
       }
-      
     }
   }
+  layerNames[[layer name]] = layer;
   return true;
 }
 
@@ -252,10 +255,8 @@ function findAssetsPage() {
 }
 
 function updateAssetsPage(artboards) {
-  var assetsPage = findAssetsPage()
-  if (assetsPage) {
-    [doc removePage:assetsPage];
-  }
+  
+  removeAssetsPage();
 
   assetsPage = [doc addBlankPage];
   [assetsPage setName:ASSETS_PAGE_NAME];
@@ -274,9 +275,7 @@ function updateAssetsPage(artboards) {
 
     for (var l = 0; l < [copyOfArtboardLayers count]; l++) {
       var layer = [copyOfArtboardLayers objectAtIndex:l];
-      if (is_new_layer(layer)) {
-        addLayerToAssetsPage(layer, assetsPage);
-      }
+      addLayerToAssetsPage(layer, assetsPage);
     }
 
     [copyOfArtboard removeFromParent];
@@ -284,9 +283,16 @@ function updateAssetsPage(artboards) {
 
   return assetsPage;
 }
+function removeAssetsPage() {
+  var assetsPage = findAssetsPage()
+  if (assetsPage) {
+    [doc removePage:assetsPage];
+  }
+}
 
 function addLayerToAssetsPage(layer, assetsPage) {
-  if (is_group(layer) && should_become_view(layer)) {
+  if (is_group(layer) && should_become_view(layer) && is_new_layer(layer)!=false) {
+    log('found that its new: '+is_new_layer(layer))
     var styles = {};
     assetsPage.addLayer(layer);
 
@@ -315,6 +321,8 @@ function addLayerToAssetsPage(layer, assetsPage) {
     [fontColor setAlpha:1];
 
     [label setTextColor:fontColor];
+
+    [[label frame] setY:AssetsOffset + 24 + (layerFrameHeightWithStyle - layerFrameHeight)];
 
     layerFrame = [layer frame];
     [layerFrame setX: 0];
