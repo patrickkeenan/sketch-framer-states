@@ -15,46 +15,37 @@ var loadLayers = function() {
 	
 	createLayer = function(layerName,stateName) {
 		var layerInSheet = FramerStatesSheet[stateName][layerName]
-		
-		var layerType, layerFrame
+		var layerFrame
 		var layerInfo = {
-			clip: false
+			visible: layerInSheet.visible
 		}
 		
 		if (layerInSheet.image) {
-			layerType = ImageView
-			//layerFrame = layer.image.frame //What is this for??
 			layerInfo.image = layerInSheet.image.path
-		}
-		else {
-			layerType = Layer
 		}
 
 		layerFrame = layerInSheet.frame
 
-		layerInfo.visible = layerInSheet.visible
-		
 		if (layerInSheet.maskFrame) {
 			layerFrame = layerInSheet.maskFrame
 			layerInfo.clip = true
 			layerFrame.width = layerInSheet.maskFrame.width
 			layerFrame.height = layerInSheet.maskFrame.height
-			
-			if (layerName.toLowerCase().indexOf("scroll") != -1) {
-				layerType = ScrollLayer
-			}
-			
-			if (layerName.toLowerCase().indexOf("paging") != -1) {
-				layerType = ui.PagingLayer
-			}
-
 		}
 		
-		var layer = new layerType(layerInfo)
+		var layer = new Layer(layerInfo)
 		
 		layer.frame = layerFrame;
 		layer.rotationZ = layerInSheet.frame.rotationZ;
 		layer.opacity = layerInSheet.frame.opacity;
+		
+		if (layerName.toLowerCase().indexOf("scroll") != -1) {
+			layerInfo.scroll = true;
+		}
+
+		if (layerName.toLowerCase().indexOf("draggable") != -1) {
+			layer.draggable.enabled = true;
+		}
 
 		if(layer.style){
 			for (var i in layerInSheet.style) {
@@ -67,10 +58,6 @@ var loadLayers = function() {
 		
 		Layers.push(layer)
 		LayersByName[layerName] = layer
-
-		if (layerName.toLowerCase().indexOf("draggable") != -1) {
-			layer.draggable = new ui.Draggable(layer)
-		}
 
 	}
 	nestLayer = function(layerName, stateName) {
