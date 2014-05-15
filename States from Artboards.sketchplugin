@@ -106,7 +106,7 @@ function generate_states(artboards) {
 
     log('checking artboard ' + artboardName + ' ' + [artboardLayers count]);
 
-    for (var layerIndex = 0; layerIndex < [artboardLayers count]; layerIndex++) {
+    for (var layerIndex = [artboardLayers count]-1; layerIndex >= 0 ; layerIndex--) {
       var layer = [artboardLayers objectAtIndex:layerIndex];
       var layerName = sanitize_filename([layer name]);
 
@@ -151,3 +151,4 @@ function main() {
 }
 
 main();
+
