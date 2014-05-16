@@ -85,7 +85,7 @@ function create_files() {
 }
 
 function generate_states(artboards) {
-  for (var artboardIndex = [artboards count] - 1; artboardIndex >= 0; artboardIndex--) {
+  for (var artboardIndex = 0; artboardIndex < [artboards count]; artboardIndex++) {
     var artboard = [artboards objectAtIndex:artboardIndex]
     var artboardName = sanitize_filename([artboard name]);
     var artboardLayers = [artboard layers];
