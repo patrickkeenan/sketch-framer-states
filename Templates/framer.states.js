@@ -12,6 +12,8 @@ var loadLayers = function() {
   var LayersByName = {}
   
   createLayer = function(layerName,stateName) {
+    console.log('creating layer\t', layerName);
+
     var layerInSheet = FramerStatesSheet[stateName][layerName]
     var layerFrame
     var layerInfo = {
@@ -77,6 +79,8 @@ var loadLayers = function() {
 
 
   setupStatesForLayer = function(layerName,stateName){
+    console.log('adding state\t', layerName, stateName);
+
     var layer = LayersByName[layerName]
     var layerFrameInSheet = FramerStatesSheet[stateName][layerName]['frame']
     
@@ -90,19 +94,12 @@ var loadLayers = function() {
   for (var stateName in FramerStatesSheet) {
     // Load the layers for this document
     for (var layerName in FramerStatesSheet[stateName]) {
-      console.log('checking layer: ',LayersByName[layerName],layerName)
-      if(!LayersByName[layerName]){
-        createLayer(layerName,stateName)
+      if (!LayersByName[layerName]) {
+        createLayer(layerName,stateName);
       }
-    }
-  }
-
-  for (var stateName in FramerStatesSheet) {
-    for (var layerName in FramerStatesSheet[stateName]) {
-      console.log('adding state',layerName,stateName)
       setupStatesForLayer(layerName,stateName);
     }
-    FramerStatesHelper.stateNames.push(stateName)
+    FramerStatesHelper.stateNames.push(stateName);
   }
 
   //TODO: This is broken, nesting should be stateful
