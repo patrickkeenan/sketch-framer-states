@@ -9,7 +9,7 @@ Framer.Config.animationDelay = 0;
 Framer.Config.animationTime = 1;
 
 var loadLayers = function() {
-  
+
   var Layers = []
   var LayersByName = {}
   
@@ -63,7 +63,7 @@ var loadLayers = function() {
   nestLayer = function(layerName, stateName) {
     var layerInSheet = FramerStatesSheet[stateName][layerName]
     var layer = LayersByName[layerName]
-    var superLayer
+    var superLayer = FramerStatesHelper.mainView
     if(layerInSheet.parentGroup){
       var superLayer = LayersByName[layerInSheet.parentGroup]
       superLayer.addSubLayer(layer)
@@ -74,6 +74,7 @@ var loadLayers = function() {
       layer.superLayer = superLayer;
       layer.sendToBack();
     }
+    console.log('adding with super',superLayer)
   }
 
 
@@ -86,24 +87,31 @@ var loadLayers = function() {
     
   // Loop through all the photoshop documents
   //var firstState = FramerStatesSheet['search']
-  var layersAreSetUp = false;
+  
   
   for (var stateName in FramerStatesSheet) {
     // Load the layers for this document
-    if(layersAreSetUp == false){
-      for (var layerName in FramerStatesSheet[stateName]) {
+    for (var layerName in FramerStatesSheet[stateName]) {
+      console.log('checking layer: ',LayersByName[layerName],layerName)
+      if(!LayersByName[layerName]){
         createLayer(layerName,stateName)
       }
-      for (var layerName in FramerStatesSheet[stateName]) {
-        nestLayer(layerName,stateName)
-      }
     }
-    layersAreSetUp = true
+  }
 
+  for (var stateName in FramerStatesSheet) {
     for (var layerName in FramerStatesSheet[stateName]) {
-      if(LayersByName[layerName]) setupStatesForLayer(layerName,stateName)
+      console.log('adding state',layerName,stateName)
+      setupStatesForLayer(layerName,stateName);
     }
     FramerStatesHelper.stateNames.push(stateName)
+  }
+
+  //TODO: This is broken, nesting should be stateful
+  for (var layerName in LayersByName) {
+    var layer = LayersByName[layerName];
+    console.log('nesting',layerName,layer.states._orderedStates[1])
+    nestLayer(layerName,layer.states._orderedStates[1])
   }
 
   FramerStatesHelper.cycle = Framer.Utils.cycle(FramerStatesHelper.stateNames)
@@ -111,37 +119,51 @@ var loadLayers = function() {
   return LayersByName
 
 }
-
+FramerStatesHelper.has_state = function(layer,stateName){
+  return layer.states._states.hasOwnProperty(stateName)
+}
 FramerStatesHelper.switchInstant =function(stateName){
   if(!stateName){
       for (var state in FramerStatesSheet) {
         stateName = state;break;
       }
     }
-    
-    for (var layerName in FramerStatesSheet[stateName]) {
-        if(LayersByName[layerName]) LayersByName[layerName].states.switchInstant(stateName);LayersByName[layerName].visible = FramerStatesSheet[stateName][layerName].visible;
+
+    for (var layerName in LayersByName) {
+    	var layer = LayersByName[layerName];
+    	console.log('checking: ',layerName,FramerStatesHelper.has_state(layer,stateName))
+      	if(FramerStatesHelper.has_state(layer,stateName)){
+      		layer.states.switchInstant(stateName);
+      		layer.visible = FramerStatesSheet[stateName][layerName].visible;
+      	}else{
+      		layer.visible = false;
+      	}
     }
 }
 FramerStatesHelper.switch =function(stateName){
-  //console.log('moving',stateName)
-  for (var layerName in FramerStatesSheet[stateName]) {
-    var layerState = FramerStatesSheet[stateName][layerName]
+	//console.log('moving',stateName)
+	for (var layerName in LayersByName) {
+		var layer = LayersByName[layerName]
 
-        if(layerState){
-          
-          var aniOptions = {
-            curve : layerState.curve,
-            time : layerState.time,
-            delay : layerState.delay  
-          }
+      	if(FramerStatesHelper.has_state(layer,stateName)){
+      		
+      		var layerState = FramerStatesSheet[stateName][layerName]
 
-      if (!aniOptions.curve) aniOptions.curve = Framer.Config.animationCurve;
-      if (!aniOptions.time) aniOptions.time = Framer.Config.animationTime;
-      if (!aniOptions.delay) aniOptions.delay = Framer.Config.animationDelay;
-      
-          LayersByName[layerName].states.switch(stateName,aniOptions);LayersByName[layerName].visible = layerState.visible;
-        }
+      		layer.states.switch(stateName,aniOptions);	
+      		layer.visible = layerState.visible;
+      		var aniOptions = {
+	      		curve : layerState.curve,
+		      	time : layerState.time,
+		      	delay : layerState.delay	
+	      	}
+
+			if (!aniOptions.curve) aniOptions.curve = Framer.Config.animationCurve;
+			if (!aniOptions.time) aniOptions.time = Framer.Config.animationTime;
+			if (!aniOptions.delay) aniOptions.delay = Framer.Config.animationDelay;
+
+      	}else{
+      		layer.visible = false;
+      	}
     }
 }
 FramerStatesHelper.animateToNextState =function(){
@@ -178,6 +200,7 @@ FramerStatesHelper.update = function(obj) {
     }
     return obj;
 }
+FramerStatesHelper.mainView = new ScrollView({x:0, y:0, width:360, height:640, scrollVertical:true})
 
 FramerStatesHelper.update(FramerStatesSheet,AppStates)
 
