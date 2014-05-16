@@ -299,6 +299,7 @@ function addLayerToAssetsPage(layer, assetsPage) {
     var layerContext = [[layer style] contextSettings];
     [layerContext setOpacity:1];
     [layer setIsVisible:true];
+    [layer setRotation:0];
 
     var rect = [layer absoluteRect];
     var layerFrameHeightWithStyle = [rect height];
