@@ -501,8 +501,8 @@ function process_layer_states(layer, artboardName, depth) {
           var metadataForMask = metadata_for(current);
           
           [layer resizeRoot]
-          //metadataForMask.x = metadataForMask.x - maskParentFrame.x
-          //metadataForMask.y = metadataForMask.y - maskParentFrame.y
+          metadataForMask.x += maskParentFrame.x;
+          metadataForMask.y += maskParentFrame.y;
           layerState.maskFrame = metadataForMask
 
         }else{
