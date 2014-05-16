@@ -4,9 +4,7 @@
 
 window.FramerStatesSheet = window.FramerStatesSheet || {};
 window.FramerStatesHelper = window.FramerStatesHelper || {stateNames:[]};
-Framer.Config.animationCurve = 'spring(500,30,0)';
-Framer.Config.animationDelay = 0;
-Framer.Config.animationTime = 1;
+Framer.Defaults.Layer.backgroundColor = 'transparent';
 
 var loadLayers = function() {
 

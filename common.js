@@ -454,7 +454,6 @@ function process_layer_states(layer, artboardName, depth) {
     else layerState.visible = true;
     
     layerState.style = extract_style_from(layer);
-    layerState.style.backgroundColor = 'transparent';
 
     // var styles = extract_style_from(layer)
     // for(var attr in styles){
