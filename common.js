@@ -448,7 +448,7 @@ function process_layer_states(layer, artboardName, depth) {
       // metadata.modification = new Date();
     }
     layerState.frame.opacity = [[layerStyle contextSettings] opacity];
-    layerState.frame.rotationZ = [layer rotation];
+    layerState.frame.rotationZ = -[layer rotation];
     //layerState.frame.visible = [layer isVisible];
     if([layer isVisible] == 0) layerState.visible = false;
     else layerState.visible = true;
