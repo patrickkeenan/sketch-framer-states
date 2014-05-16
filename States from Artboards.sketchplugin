@@ -135,6 +135,9 @@ function main() {
     [doc showMessage: "Sketch Framer: You must have multiple artboards for this to work"];
     return;
   }
+  
+  //TODO: disable dropshadow and replace with CSS
+  //TODO: Make scroll view work
 
   //BUG: Maybe it needs to be children rather than layers?
   updateAssetsPage(artboards);

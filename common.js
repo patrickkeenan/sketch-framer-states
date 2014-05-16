@@ -104,7 +104,7 @@ function extract_shadow_from(layer) {
       +[shadowObjectColor alpha]+')'
     CSSShadow = [shadowObject offsetX]+'px '+[shadowObject offsetY]+'px '+[shadowObject blurRadius]+'px '+[shadowObject spread]+'px '+shadowColor;
     
-    //layer.style().shadows().removeStylePart(shadowObject)
+    layer.style().shadows().removeStylePart(shadowObject)
   }
   return CSSShadow;
 
@@ -114,7 +114,7 @@ function extract_shadow_from(layer) {
 function extract_style_from(shapeLayer) {
   var CSSString = [shapeLayer CSSAttributeString];
   var styles ={}
-
+  /*
   var stylestemp = CSSString.split('\n');
   
   for (var i = 0; i < stylestemp.length ; i++) {
@@ -126,6 +126,7 @@ function extract_style_from(shapeLayer) {
       styles[attr] = val;
     }
   } 
+  */
 
   var shadow = extract_shadow_from(shapeLayer)
 
@@ -135,7 +136,6 @@ function extract_style_from(shapeLayer) {
   }
 
   //TODO Make styles if its a rectangle, but get border radius working first
-  return {}
   return styles
   //+'\n-webkit-transform: rotateZ('+shapeLayer.rotation()+'deg);'
 
@@ -179,7 +179,7 @@ function export_layer(layer) {
 
     var filename = images_folder + "/" + sanitize_filename(layerName) + ".png";
 
-    var slice = [MSSlice sliceWithRect:[[layer absoluteRect] rect] scale:1];
+    var slice = [MSSlice sliceWithRect:[[layer absoluteRect] rect] scale:2];
 
     if (in_sandbox()) {
       sandboxAccess.accessFilePath_withBlock_persistPermission(target_folder, function(){
@@ -452,12 +452,13 @@ function process_layer_states(layer, artboardName, depth) {
     if([layer isVisible] == 0) layerState.visible = false;
     else layerState.visible = true;
     
-    layerState.style = {backgroundColor:'transparent'}
+    layerState.style = extract_style_from(layer);
+    layerState.style.backgroundColor = 'transparent';
 
-    var styles = extract_style_from(layer)
-    for(var attr in styles){
-      layerState.style[attr] = styles[attr]
-    }
+    // var styles = extract_style_from(layer)
+    // for(var attr in styles){
+    //   layerState.style[attr] = styles[attr]
+    // }
 
     // TODO: Make layer names have animation properities
     // if(layerName.indexOf('delay') > -1){
