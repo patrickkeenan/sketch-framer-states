@@ -11,50 +11,35 @@ var loadLayers = function() {
   var Layers = []
   var LayersByName = {}
   
-  createLayer = function(layerName,stateName) {
+  createLayer = function(layerName, stateName) {
     console.log('creating layer\t', layerName);
 
     var layerInSheet = FramerStatesSheet[stateName][layerName]
-    var layerFrame
     var layerInfo = {
-      visible: layerInSheet.visible
-    }
-    
-    if (layerInSheet.image) {
-      layerInfo.image = layerInSheet.image.path
+      name: layerName,
+      frame: layerInSheet.maskFrame || layerInSheet.frame,
+      image: layerInSheet.image && layerInSheet.image.path,
+      visible: layerInSheet.visible,
+      rotationZ: layerInSheet.frame.rotationZ,
+      opacity: layerInSheet.frame.opacity,
+      clip: !!layerInSheet.maskFrame,
     }
 
-    layerFrame = layerInSheet.frame
-
-    if (layerInSheet.maskFrame) {
-      layerFrame = layerInSheet.maskFrame
-      layerInfo.clip = true
-      layerFrame.width = layerInSheet.maskFrame.width
-      layerFrame.height = layerInSheet.maskFrame.height
-    }
-    
     var layer = new Layer(layerInfo)
     
-    layer.frame = layerFrame;
-    layer.rotationZ = layerInSheet.frame.rotationZ;
-    layer.opacity = layerInSheet.frame.opacity;
-    
     if (layerName.toLowerCase().indexOf("scroll") != -1) {
-      layerInfo.scroll = true;
+      layer.scroll = true;
     }
 
     if (layerName.toLowerCase().indexOf("draggable") != -1) {
       layer.draggable.enabled = true;
     }
 
-    if(layer.style){
+    if (layer.style){
       for (var i in layerInSheet.style) {
         layer.style[i] = layerInSheet.style[i]
       } 
     }
-    
-    layer.name = layerName
-    layer.layerInfo = layerInSheet
     
     Layers.push(layer)
     LayersByName[layerName] = layer
@@ -82,7 +67,7 @@ var loadLayers = function() {
     console.log('adding state\t', layerName, stateName);
 
     var layer = LayersByName[layerName]
-    var layerFrameInSheet = FramerStatesSheet[stateName][layerName]['frame']
+    var layerFrameInSheet = FramerStatesSheet[stateName][layerName].maskFrame || FramerStatesSheet[stateName][layerName].frame;
     
     layer.states.add(stateName,layerFrameInSheet)
   }
