@@ -91,7 +91,7 @@ function extract_shadow_from(layer) {
   var styleObjects = [[layer style] shadows]
   log('Checking shadow'+' '+[styleObjects count]+' '+styles+' '+styleObjects)
 
-  var CSSShadow=false;
+  var CSSShadow;
   
   for(var i=0;i<[styleObjects count];i++){
     var shadowObject =[styleObjects objectAtIndex:i]
@@ -120,7 +120,7 @@ function extract_style_from(layerGroup) {
   };
 
   var child = [[layerGroup layers] firstObject]];
-  if ([[layerGroup layers] count] != 1 || [[child layers] count] != 1 || [child className] != "MSShapeGroup") {
+  if ([[layerGroup layers] count] != 1 || [child className] != "MSShapeGroup" || [[child layers] count] != 1) {
     return styles;
   }
 
