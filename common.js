@@ -498,9 +498,11 @@ function process_layer_states(layer, artboardName, depth) {
           var metadataForMask = metadata_for(current);
           
           [layer resizeRoot]
-          metadataForMask.x += maskParentFrame.x;
-          metadataForMask.y += maskParentFrame.y;
-          layerState.maskFrame = metadataForMask
+          maskParentFrame.x = metadataForMask.x + maskParentFrame.x;
+          maskParentFrame.y = metadataForMask.y + maskParentFrame.y;
+          maskParentFrame.width = metadataForMask.width;
+          maskParentFrame.height = metadataForMask.height;
+          layerState.clip = true;
 
         }else{
           if(!is_bitmap(current)){

@@ -17,12 +17,12 @@ var loadLayers = function() {
     var layerInSheet = FramerStatesSheet[stateName][layerName]
     var layerInfo = {
       name: layerName,
-      frame: layerInSheet.maskFrame || layerInSheet.frame,
+      frame: layerInSheet.frame,
       image: layerInSheet.image && layerInSheet.image.path,
       visible: layerInSheet.visible,
       rotationZ: layerInSheet.frame.rotationZ,
       opacity: layerInSheet.frame.opacity,
-      clip: !!layerInSheet.maskFrame,
+      clip: layerInSheet.clip,
     }
 
     var layer = new Layer(layerInfo)
@@ -67,7 +67,7 @@ var loadLayers = function() {
     console.log('adding state\t', layerName, stateName);
 
     var layer = LayersByName[layerName]
-    var layerFrameInSheet = FramerStatesSheet[stateName][layerName].maskFrame || FramerStatesSheet[stateName][layerName].frame;
+    var layerFrameInSheet = FramerStatesSheet[stateName][layerName].frame;
     
     layer.states.add(stateName,layerFrameInSheet)
   }
