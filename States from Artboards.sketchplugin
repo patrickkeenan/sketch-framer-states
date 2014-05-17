@@ -15,6 +15,7 @@ var document_path = [[doc fileURL] path].split([doc displayName])[0],
     file_manager = [NSFileManager defaultManager],
     AssetsOffset = 0,
     states_metadata = {},
+    mainLayer = {},
     layerNames ={},
     assetsPage,
     framerjs_url = "https://raw.githubusercontent.com/koenbok/FramerExamples/master/Examples/Animation%20-%20Basics.framer/framer/framer.js",
@@ -70,9 +71,16 @@ function create_files() {
   create_folder(framer_folder);
 
   // State data sheet
-  var JSON_States = JSON.stringify(states_metadata, null, 2).replace(/"(\w+)"\s*:/g, '$1:'),
-      file_path = framer_folder + "/states." + document_name + ".js",
-      file_contents = "window.FramerStatesSheet = " + JSON_States +"\n";
+  var JSON_States = JSON.stringify(states_metadata, null, 2).replace(/"(\w+)"\s*:/g, '$1:')
+  
+  var file_path = framer_folder + "/states." + document_name + ".js";
+  
+  var file_contents = "window.FramerStatesSheet = " + JSON_States +"\n";
+
+  var JSON_mainLayer = JSON.stringify(mainLayer, null, 2).replace(/"(\w+)"\s*:/g, '$1:')
+
+  file_contents += "Framer.Config.mainLayer = " + " new ScrollView("+ JSON_mainLayer +")" +"\n Framer.Config.mainLayer.style.backgroundColor='transparent'\n";
+
   create_file_from_string(file_path, file_contents, true);
 
   // Local template files
@@ -118,6 +126,9 @@ function main() {
   
   var page = [doc currentPage];
   var artboards = [page artboards];
+
+  mainLayer = metadata_for([artboards firstObject])
+  mainLayer.x = mainLayer.y = 0;
 
   if (![artboards count]) {
     [doc showMessage: "Sketch Framer: You must have multiple artboards for this to work"];
