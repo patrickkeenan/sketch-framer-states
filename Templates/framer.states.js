@@ -99,55 +99,50 @@ var loadLayers = function() {
   return LayersByName
 
 }
+
 FramerStatesHelper.has_state = function(layer,stateName){
   return layer.states._states.hasOwnProperty(stateName)
 }
-FramerStatesHelper.switchInstant =function(stateName){
-  if(!stateName){
-      for (var state in FramerStatesSheet) {
-        stateName = state;break;
-      }
-    }
-    FramerStatesHelper.adjustZforState(stateName);
 
-    for (var layerName in LayersByName) {
-      var layer = LayersByName[layerName];
-      console.log('checking: ',layerName,FramerStatesHelper.has_state(layer,stateName))
-        if(FramerStatesHelper.has_state(layer,stateName)){
-          layer.states.switchInstant(stateName);
-          layer.visible = FramerStatesSheet[stateName][layerName].visible;
-          FramerStatesHelper.switchEvents(stateName, layer);
-        }else{
-          layer.visible = false;
-        }
-    }
-}
-FramerStatesHelper.switch =function(stateName){
-  //console.log('moving',stateName)
+FramerStatesHelper.switchInstant = function(stateName) {
   FramerStatesHelper.adjustZforState(stateName);
+
   for (var layerName in LayersByName) {
-    var layer = LayersByName[layerName]
-
-        if (FramerStatesHelper.has_state(layer, stateName)) {
-          
-          var layerState = FramerStatesSheet[stateName][layerName]
-
-          layer.visible = layerState.visible;
-
-          layer.states.switch(stateName, {
-            curve : layerState.curve || Framer.Config.animationCurve,
-            time : layerState.time || Framer.Config.animationTime,
-            delay : layerState.delay || Framer.Config.animationDelay
-          });
-
-          FramerStatesHelper.switchEvents(stateName, layer);
-
-        } else {
-          layer.visible = false;
-        }
+    var layer = LayersByName[layerName];
+    if (FramerStatesHelper.has_state(layer, stateName)) {
+      layer.visible = FramerStatesSheet[stateName][layerName].visible;
+      layer.states.switchInstant(stateName);
+      FramerStatesHelper.switchEvents(stateName, layer);
+    } else {
+      layer.visible = false;
     }
+  }
 }
-FramerStatesHelper.animateToNextState =function(){
+FramerStatesHelper.switch = function(stateName) {
+  FramerStatesHelper.adjustZforState(stateName);
+
+  for (var layerName in LayersByName) {
+    var layer = LayersByName[layerName];
+    if (FramerStatesHelper.has_state(layer, stateName)) {
+      var layerState = FramerStatesSheet[stateName][layerName]
+
+      layer.visible = layerState.visible;
+
+      layer.states.switch(stateName, {
+        curve: layerState.curve || Framer.Config.animationCurve,
+        time: layerState.time || Framer.Config.animationTime,
+        delay: layerState.delay || Framer.Config.animationDelay
+      });
+
+      FramerStatesHelper.switchEvents(stateName, layer);
+
+    } else {
+      layer.visible = false;
+    }
+  }
+}
+
+FramerStatesHelper.switchToNextState = function() {
   FramerStatesHelper.switch(FramerStatesHelper.cycle())
 }
 
