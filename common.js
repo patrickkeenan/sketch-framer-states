@@ -86,28 +86,15 @@ function log_depth(message, depth) {
 // Currently unused CSS functions
 
 function extract_shadow_from(layer) {
-  //TODO: Get the blur properties
-  var styles = {}
-  var styleObjects = [[layer style] shadows]
-  log('Checking shadow'+' '+[styleObjects count]+' '+styles+' '+styleObjects)
-
-  var CSSShadow;
-  
-  for(var i=0;i<[styleObjects count];i++){
-    var shadowObject =[styleObjects objectAtIndex:i]
-    log('Found shadow'+shadowObject)
-    var shadowObjectColor = [shadowObject color]
-    var shadowColor='rgba('
-      +Math.round([shadowObjectColor red]*255)+','
-      +Math.round([shadowObjectColor green]*255)+','
-      +Math.round([shadowObjectColor blue]*255)+','
-      +[shadowObjectColor alpha]+')'
-    CSSShadow = [shadowObject offsetX]+'px '+[shadowObject offsetY]+'px '+[shadowObject blurRadius]+'px '+[shadowObject spread]+'px '+shadowColor;
-    
-    layer.style().shadows().removeStylePart(shadowObject)
+  var shadows = [[layer style] shadows];
+  if ([shadows count]) {
+    var shadow = [shadows firstObject];
+    return [shadow offsetX] + 'px ' + 
+           [shadow offsetY]+'px ' +
+           [shadow blurRadius]+ 'px ' + 
+           [shadow spread]+ 'px ' +
+           [[shadow color] stringValueWithAlpha:true];
   }
-  return CSSShadow;
-
 }
 
 
@@ -115,22 +102,22 @@ function extract_style_from(layerGroup) {
 
   log('extract_style_from(' + layerGroup + ')')
 
-  var styles = {
-    boxShadow: extract_shadow_from(layerGroup)
-  };
-
   var child = [[layerGroup layers] firstObject]];
+
+  // If not shape layer inside, have to manually extract shadow
   if ([[layerGroup layers] count] != 1 || [child className] != "MSShapeGroup" || [[child layers] count] != 1) {
-    return styles;
+    return {
+      boxShadow: extract_shadow_from(layerGroup)
+    }
   }
 
   var shape = [[child layers] firstObject];
-  if ([shape className] == "MSOvalShape") {
-    styles.borderRadius = "9999px";
-  } else if ([shape className] != "MSRectangleShape") {
-    return styles;
+  // Only handle rectangles and ovals
+  if (!([shape className] == "MSRectangleShape" || [shape className] == "MSOvalShape")) {
+    return {};
   }
 
+  var styles = {};
   var cssString = [layerGroup CSSAttributeString];
   var cssLines = cssString.split('\n');
 
@@ -143,6 +130,10 @@ function extract_style_from(layerGroup) {
       styles[attr] = val;
     }
   });
+
+  if ([shape className] == "MSOvalShape") {
+    styles.borderRadius = "9999px";
+  }
 
   return styles;
 }
