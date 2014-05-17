@@ -5,6 +5,9 @@
 window.FramerStatesSheet = window.FramerStatesSheet || {};
 window.FramerStatesHelper = window.FramerStatesHelper || {stateNames:[]};
 Framer.Defaults.Layer.backgroundColor = 'transparent';
+Framer.Config.animationCurve = 'spring(500,30,0)';
+Framer.Config.animationDelay = 0;
+Framer.Config.animationTime = 1;
 
 var loadLayers = function() {
 
@@ -16,35 +19,60 @@ var loadLayers = function() {
 		
 		var layerType, layerFrame
 		var layerInfo = {
-	      name: layerName,
-	      frame: layerInSheet.maskFrame || layerInSheet.frame,
-	      image: layerInSheet.image && layerInSheet.image.path,
-	      visible: layerInSheet.visible,
-	      rotationZ: layerInSheet.frame.rotationZ,
-	      opacity: layerInSheet.frame.opacity,
-	      clip: !!layerInSheet.maskFrame,
-	    }
+			clip: false
+		}
+		
+		if (layerInSheet.image) {
+			layerType = ImageView
+			//layerFrame = layer.image.frame //What is this for??
+			layerInfo.image = layerInSheet.image.path
+		}
+		else {
+			layerType = Layer
+		}
 
-	    var layer = new Layer(layerInfo)
+		layerFrame = layerInSheet.frame
+
+		layerInfo.visible = layerInSheet.visible
+		
+		if (layerInSheet.maskFrame) {
+			layerFrame = layerInSheet.maskFrame
+			layerInfo.clip = true
+			layerFrame.width = layerInSheet.maskFrame.width
+			layerFrame.height = layerInSheet.maskFrame.height
+		}
 		
 		if (layerName.toLowerCase().indexOf("scroll") != -1) {
-	      layer.scroll = true;
-	    }
+			layerType = ScrollView
+		}
+		
+		if (layerName.toLowerCase().indexOf("paging") != -1) {
+			layerType = ui.PagingView
+		}
+		
+		var layer = new layerType(layerInfo)
+		
+		layer.frame = layerFrame;
+		layer.rotationZ = layerInSheet.frame.rotationZ;
+		layer.opacity = layerInSheet.frame.opacity;
 
-	    if (layerName.toLowerCase().indexOf("draggable") != -1) {
-	      layer.draggable.enabled = true;
-	    }
+		if(layer.style){
+			for (var i in layerInSheet.style) {
+				layer.style[i] = layerInSheet.style[i]
+			}	
+		}
+		
+		layer.name = layerName
+		layer.layerInfo = layerInSheet
+		
+		Layers.push(layer)
+		LayersByName[layerName] = layer
 
-	    if (layer.style){
-	      for (var i in layerInSheet.style) {
-	        layer.style[i] = layerInSheet.style[i]
-	      } 
-	    }
-	    
-	    Layers.push(layer)
-	    LayersByName[layerName] = layer
+		if (layerName.toLowerCase().indexOf("draggable") != -1) {
+			layer.draggable.enabled = true;
+		}
+
 	}
-
 	nestLayer = function(layerName, stateName) {
 		
 		var layerInSheet = FramerStatesSheet[stateName][layerName]
@@ -109,14 +137,14 @@ FramerStatesHelper.has_state = function(layer,stateName){
 FramerStatesHelper.switchInstant =function(stateName){
 	if(!stateName){
       for (var state in FramerStatesSheet) {
-        stateName = state;
-        break;
+        stateName = state;break;
       }
     }
     FramerStatesHelper.adjustZforState(stateName);
     
     for (var layerName in LayersByName) {
     	var layer = LayersByName[layerName];
+    	console.log('checking: ',layerName,FramerStatesHelper.has_state(layer,stateName))
       	if(FramerStatesHelper.has_state(layer,stateName)){
       		layer.states.switchInstant(stateName);
       		layer.visible = FramerStatesSheet[stateName][layerName].visible;
@@ -135,15 +163,18 @@ FramerStatesHelper.switch =function(stateName){
       	if(FramerStatesHelper.has_state(layer,stateName)){
       		
       		var layerState = FramerStatesSheet[stateName][layerName]
+      		layer.visible = layerState.visible;
+      		var aniOptions = {
+	      		curve : layerState.curve,
+		      	time : layerState.time,
+		      	delay : layerState.delay	
+	      	}
 
-        	layer.visible = layerState.visible;
+			if (!aniOptions.curve) aniOptions.curve = Framer.Config.animationCurve;
+			if (!aniOptions.time) aniOptions.time = Framer.Config.animationTime;
+			if (!aniOptions.delay) aniOptions.delay = Framer.Config.animationDelay;
 
-			layer.states.switch(stateName, {
-	            curve : layerState.curve || Framer.Config.animationCurve,
-	            time : layerState.time || Framer.Config.animationTime,
-	            delay : layerState.delay || Framer.Config.animationDelay
-	        });
-
+			layer.states.switch(stateName,aniOptions);
 			FramerStatesHelper.switchEvents(stateName,layer)
 
       	}else{
