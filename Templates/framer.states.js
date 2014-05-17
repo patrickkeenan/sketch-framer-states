@@ -40,7 +40,7 @@ var loadLayers = function() {
 			layerFrame.width = layerInSheet.maskFrame.width
 			layerFrame.height = layerInSheet.maskFrame.height
 		}
-		console.log('looking for special layer',layerName)
+		
 		if (layerName.toLowerCase().indexOf("scroll") != -1) {
 			layerType = ScrollView
 		}
@@ -76,7 +76,7 @@ var loadLayers = function() {
 		
 		var layerInSheet = FramerStatesSheet[stateName][layerName]
 		var layer = LayersByName[layerName]
-		var superLayer = FramerStatesHelper.mainView
+		var superLayer = Framer.Config.mainLayer
 		if(layerInSheet.parentGroup){
 			var superLayer = LayersByName[layerInSheet.parentGroup]
 			superLayer.addSubLayer(layer)
@@ -87,7 +87,7 @@ var loadLayers = function() {
 			layer.superLayer = superLayer;
 			layer.sendToBack();
 		}
-		console.log('adding with super',superLayer)
+		
 	}
 
 
@@ -105,7 +105,6 @@ var loadLayers = function() {
 	for (var stateName in FramerStatesSheet) {
 		// Load the layers for this document
 		for (var layerName in FramerStatesSheet[stateName]) {
-			console.log('checking layer: ',LayersByName[layerName],layerName)
 			if(!LayersByName[layerName]){
 				createLayer(layerName,stateName)
 			}
@@ -114,7 +113,6 @@ var loadLayers = function() {
 
 	for (var stateName in FramerStatesSheet) {
 		for (var layerName in FramerStatesSheet[stateName]) {
-			console.log('adding state',layerName,stateName)
 			setupStatesForLayer(layerName,stateName);
 		}
 		FramerStatesHelper.stateNames.push(stateName)
@@ -123,7 +121,6 @@ var loadLayers = function() {
 	//TODO: This is broken, nesting should be stateful
 	for (var layerName in LayersByName) {
 		var layer = LayersByName[layerName];
-		console.log('nesting',layerName,layer.states._orderedStates[1])
 		nestLayer(layerName,layer.states._orderedStates[1])
 	}
 
@@ -141,6 +138,7 @@ FramerStatesHelper.switchInstant =function(stateName){
         stateName = state;break;
       }
     }
+    FramerStatesHelper.adjustZforState(stateName);
     
     for (var layerName in LayersByName) {
     	var layer = LayersByName[layerName];
@@ -148,6 +146,7 @@ FramerStatesHelper.switchInstant =function(stateName){
       	if(FramerStatesHelper.has_state(layer,stateName)){
       		layer.states.switchInstant(stateName);
       		layer.visible = FramerStatesSheet[stateName][layerName].visible;
+      		FramerStatesHelper.switchEvents(stateName,layer)
       	}else{
       		layer.visible = false;
       	}
@@ -155,14 +154,13 @@ FramerStatesHelper.switchInstant =function(stateName){
 }
 FramerStatesHelper.switch =function(stateName){
 	//console.log('moving',stateName)
+	FramerStatesHelper.adjustZforState(stateName);
 	for (var layerName in LayersByName) {
 		var layer = LayersByName[layerName]
 
       	if(FramerStatesHelper.has_state(layer,stateName)){
       		
       		var layerState = FramerStatesSheet[stateName][layerName]
-
-      		layer.states.switch(stateName,aniOptions);	
       		layer.visible = layerState.visible;
       		var aniOptions = {
 	      		curve : layerState.curve,
@@ -173,6 +171,9 @@ FramerStatesHelper.switch =function(stateName){
 			if (!aniOptions.curve) aniOptions.curve = Framer.Config.animationCurve;
 			if (!aniOptions.time) aniOptions.time = Framer.Config.animationTime;
 			if (!aniOptions.delay) aniOptions.delay = Framer.Config.animationDelay;
+
+			layer.states.switch(stateName,aniOptions);
+			FramerStatesHelper.switchEvents(stateName,layer)
 
       	}else{
       		layer.visible = false;
@@ -186,10 +187,18 @@ FramerStatesHelper.switchEvents = function(stateName,layer){
 	var eventsInSheet = FramerStatesSheet[stateName][layer.name].events
 	if(eventsInSheet){
 		for(var ev in eventsInSheet){
+			console.log('found event',ev,eventsInSheet)
 			layer.on(ev,eventsInSheet[ev])
 		}	
+		if(eventsInSheet['load']){
+			eventsInSheet['load'].call(layer)
+		}
 	}
-	
+}
+FramerStatesHelper.adjustZforState =function(stateName){
+	for (var layerName in FramerStatesSheet[stateName]) {
+		LayersByName[layerName].sendToBack();
+	}
 }
 
 FramerStatesHelper.update = function(obj) {
@@ -213,7 +222,6 @@ FramerStatesHelper.update = function(obj) {
     }
     return obj;
 }
-FramerStatesHelper.mainView = new ScrollView({x:0, y:0, width:360, height:640, scrollVertical:true})
 
 FramerStatesHelper.update(FramerStatesSheet,AppStates)
 
