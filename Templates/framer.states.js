@@ -5,227 +5,179 @@
 window.FramerStatesSheet = window.FramerStatesSheet || {};
 window.FramerStatesHelper = window.FramerStatesHelper || {stateNames:[]};
 Framer.Defaults.Layer.backgroundColor = 'transparent';
-Framer.Config.animationCurve = 'spring(500,30,0)';
-Framer.Config.animationDelay = 0;
-Framer.Config.animationTime = 1;
 
 var loadLayers = function() {
 
-	var Layers = []
-	var LayersByName = {}
+  var Layers = []
+  var LayersByName = {}
+  
+  createLayer = function(layerName, stateName) {
+    console.log('creating layer\t', layerName);
 
-	createLayer = function(layerName,stateName) {
-		var layerInSheet = FramerStatesSheet[stateName][layerName]
-		
-		var layerType, layerFrame
-		var layerInfo = {
-			clip: false
-		}
-		
-		if (layerInSheet.image) {
-			layerType = ImageView
-			//layerFrame = layer.image.frame //What is this for??
-			layerInfo.image = layerInSheet.image.path
-		}
-		else {
-			layerType = Layer
-		}
+    var layerInSheet = FramerStatesSheet[stateName][layerName]
+    var layerInfo = {
+      name: layerName,
+      frame: layerInSheet.frame,
+      image: layerInSheet.image && layerInSheet.image.path,
+      visible: layerInSheet.visible,
+      rotationZ: layerInSheet.frame.rotationZ,
+      opacity: layerInSheet.frame.opacity,
+      clip: layerInSheet.clip,
+    }
 
-		layerFrame = layerInSheet.frame
+    var layer = new Layer(layerInfo)
+    
+    if (layerName.toLowerCase().indexOf("scroll") != -1) {
+      layer.scroll = true;
+    }
 
-		layerInfo.visible = layerInSheet.visible
-		
-		if (layerInSheet.maskFrame) {
-			layerFrame = layerInSheet.maskFrame
-			layerInfo.clip = true
-			layerFrame.width = layerInSheet.maskFrame.width
-			layerFrame.height = layerInSheet.maskFrame.height
-		}
-		
-		if (layerName.toLowerCase().indexOf("scroll") != -1) {
-			layerType = ScrollView
-		}
-		
-		if (layerName.toLowerCase().indexOf("paging") != -1) {
-			layerType = ui.PagingView
-		}
-		
-		var layer = new layerType(layerInfo)
-		
-		layer.frame = layerFrame;
-		layer.rotationZ = layerInSheet.frame.rotationZ;
-		layer.opacity = layerInSheet.frame.opacity;
+    if (layerName.toLowerCase().indexOf("draggable") != -1) {
+      layer.draggable.enabled = true;
+    }
 
-		if(layer.style){
-			for (var i in layerInSheet.style) {
-				layer.style[i] = layerInSheet.style[i]
-			}	
-		}
-		
-		layer.name = layerName
-		layer.layerInfo = layerInSheet
-		
-		Layers.push(layer)
-		LayersByName[layerName] = layer
+    if (layer.style){
+      for (var i in layerInSheet.style) {
+        layer.style[i] = layerInSheet.style[i]
+      } 
+    }
+    
+    Layers.push(layer)
+    LayersByName[layerName] = layer
 
-		if (layerName.toLowerCase().indexOf("draggable") != -1) {
-			layer.draggable.enabled = true;
-		}
-
-	}
-	nestLayer = function(layerName, stateName) {
-		
-		var layerInSheet = FramerStatesSheet[stateName][layerName]
-		var layer = LayersByName[layerName]
-		var superLayer = Framer.Config.mainLayer
-		if(layerInSheet.parentGroup){
-			var superLayer = LayersByName[layerInSheet.parentGroup]
-			superLayer.addSubLayer(layer)
-		}
-		if (superLayer && superLayer.contentLayer) {
-			layer.superLayer = superLayer.contentLayer
-		} else {
-			layer.superLayer = superLayer;
-			layer.sendToBack();
-		}
-		
-	}
+  }
+  nestLayer = function(layerName, stateName) {
+    var layerInSheet = FramerStatesSheet[stateName][layerName]
+    var layer = LayersByName[layerName]
+    var superLayer = Framer.Config.mainLayer;
+    if(layerInSheet.parentGroup){
+      var superLayer = LayersByName[layerInSheet.parentGroup]
+      superLayer.addSubLayer(layer)
+    }
+    if (superLayer && superLayer.contentLayer) {
+      layer.superLayer = superLayer.contentLayer
+    } else {
+      layer.superLayer = superLayer;
+      layer.sendToBack();
+    }
+    console.log('adding with super',superLayer)
+  }
 
 
-	setupStatesForLayer = function(layerName,stateName){
-		var layer = LayersByName[layerName]
-		var layerFrameInSheet = FramerStatesSheet[stateName][layerName]['frame']
-		
-		layer.states.add(stateName,layerFrameInSheet)
-	}
-		
-	// Loop through all the photoshop documents
-	//var firstState = FramerStatesSheet['search']
-	
-	
-	for (var stateName in FramerStatesSheet) {
-		// Load the layers for this document
-		for (var layerName in FramerStatesSheet[stateName]) {
-			if(!LayersByName[layerName]){
-				createLayer(layerName,stateName)
-			}
-		}
-	}
+  setupStatesForLayer = function(layerName,stateName){
+    console.log('adding state\t', layerName, stateName);
 
-	for (var stateName in FramerStatesSheet) {
-		for (var layerName in FramerStatesSheet[stateName]) {
-			setupStatesForLayer(layerName,stateName);
-		}
-		FramerStatesHelper.stateNames.push(stateName)
-	}
+    var layer = LayersByName[layerName]
+    var layerFrameInSheet = FramerStatesSheet[stateName][layerName].frame;
+    
+    layer.states.add(stateName,layerFrameInSheet)
+  }
+    
+  // Loop through all the photoshop documents
+  //var firstState = FramerStatesSheet['search']
+  
+  
+  for (var stateName in FramerStatesSheet) {
+    // Load the layers for this document
+    for (var layerName in FramerStatesSheet[stateName]) {
+      if (!LayersByName[layerName]) {
+        createLayer(layerName,stateName);
+      }
+      setupStatesForLayer(layerName,stateName);
+    }
+    FramerStatesHelper.stateNames.push(stateName);
+  }
 
-	//TODO: This is broken, nesting should be stateful
-	for (var layerName in LayersByName) {
-		var layer = LayersByName[layerName];
-		nestLayer(layerName,layer.states._orderedStates[1])
-	}
+  //TODO: This is broken, nesting should be stateful
+  for (var layerName in LayersByName) {
+    var layer = LayersByName[layerName];
+    console.log('nesting',layerName,layer.states._orderedStates[1])
+    nestLayer(layerName,layer.states._orderedStates[1])
+  }
 
-    FramerStatesHelper.cycle = Framer.Utils.cycle(FramerStatesHelper.stateNames)
-	
-	return LayersByName
+  FramerStatesHelper.cycle = Framer.Utils.cycle(FramerStatesHelper.stateNames)
+  
+  return LayersByName
+
 }
 
 FramerStatesHelper.has_state = function(layer,stateName){
-	return layer.states._states.hasOwnProperty(stateName)
+  return layer.states._states.hasOwnProperty(stateName)
 }
 
-FramerStatesHelper.switchInstant =function(stateName){
-	if(!stateName){
-      for (var state in FramerStatesSheet) {
-        stateName = state;break;
-      }
+FramerStatesHelper.switchInstant = function(stateName) {
+  FramerStatesHelper.adjustZforState(stateName);
+
+  for (var layerName in LayersByName) {
+    var layer = LayersByName[layerName];
+    if (FramerStatesHelper.has_state(layer, stateName)) {
+      layer.visible = FramerStatesSheet[stateName][layerName].visible;
+      layer.states.switchInstant(stateName);
+      FramerStatesHelper.switchEvents(stateName, layer);
+    } else {
+      layer.visible = false;
     }
-    FramerStatesHelper.adjustZforState(stateName);
-    
-    for (var layerName in LayersByName) {
-    	var layer = LayersByName[layerName];
-    	console.log('checking: ',layerName,FramerStatesHelper.has_state(layer,stateName))
-      	if(FramerStatesHelper.has_state(layer,stateName)){
-      		layer.states.switchInstant(stateName);
-      		layer.visible = FramerStatesSheet[stateName][layerName].visible;
-      		FramerStatesHelper.switchEvents(stateName,layer)
-      	}else{
-      		layer.visible = false;
-      	}
+  }
+}
+FramerStatesHelper.switch = function(stateName) {
+  FramerStatesHelper.adjustZforState(stateName);
+
+  for (var layerName in LayersByName) {
+    var layer = LayersByName[layerName];
+    if (FramerStatesHelper.has_state(layer, stateName)) {
+      var layerState = FramerStatesSheet[stateName][layerName]
+
+      layer.visible = layerState.visible;
+
+      layer.states.switch(stateName, {
+        curve: layerState.curve || Framer.Config.animationCurve,
+        time: layerState.time || Framer.Config.animationTime,
+        delay: layerState.delay || Framer.Config.animationDelay
+      });
+
+      FramerStatesHelper.switchEvents(stateName, layer);
+
+    } else {
+      layer.visible = false;
     }
+  }
 }
 
-FramerStatesHelper.switch =function(stateName){
-	FramerStatesHelper.adjustZforState(stateName);
-	for (var layerName in LayersByName) {
-		var layer = LayersByName[layerName]
-
-      	if(FramerStatesHelper.has_state(layer,stateName)){
-      		
-      		var layerState = FramerStatesSheet[stateName][layerName]
-      		layer.visible = layerState.visible;
-      		var aniOptions = {
-	      		curve : layerState.curve,
-		      	time : layerState.time,
-		      	delay : layerState.delay	
-	      	}
-
-			if (!aniOptions.curve) aniOptions.curve = Framer.Config.animationCurve;
-			if (!aniOptions.time) aniOptions.time = Framer.Config.animationTime;
-			if (!aniOptions.delay) aniOptions.delay = Framer.Config.animationDelay;
-
-			layer.states.switch(stateName,aniOptions);
-			FramerStatesHelper.switchEvents(stateName,layer)
-
-      	}else{
-      		layer.visible = false;
-      	}
-    }
-}
-FramerStatesHelper.animateToNextState =function(){
+FramerStatesHelper.switchToNextState = function() {
   FramerStatesHelper.switch(FramerStatesHelper.cycle())
 }
-FramerStatesHelper.switchEvents = function(stateName,layer){
-	var eventsInSheet = FramerStatesSheet[stateName][layer.name].events
-	if(eventsInSheet){
-		for(var ev in eventsInSheet){
-			layer.on(ev,eventsInSheet[ev])
-		}	
-		if(eventsInSheet['load']){
-			eventsInSheet['load'].call(layer)
-		}
-	}
-}
-FramerStatesHelper.adjustZforState =function(stateName){
-	for (var layerName in FramerStatesSheet[stateName]) {
-		LayersByName[layerName].sendToBack();
-	}
-}
 
-FramerStatesHelper.update = function(obj) {
-    for (var i=1; i<arguments.length; i++) {
-        for (var prop in arguments[i]) {
-            var val = arguments[i][prop];
-            try{
-
-              if (typeof val == "object"){
-                if(!obj[prop]) obj[prop] = {};
-                  FramerStatesHelper.update(obj[prop], val);
-              }
-              else{
-                  obj[prop] = val;  
-              }
-          }catch(e){
-            console.error(e)
-          }
-            
-        }
+FramerStatesHelper.switchEvents = function(stateName, layer){
+  var eventsInSheet = FramerStatesSheet[stateName][layer.name].events;
+  if (eventsInSheet) {
+    for (var ev in eventsInSheet) {
+      layer.on(ev, eventsInSheet[ev])
     }
-    return obj;
+    if (eventsInSheet['load']) {
+      eventsInSheet['load'].call(layer)
+    }
+  }
 }
 
-FramerStatesHelper.update(FramerStatesSheet,AppStates);
+FramerStatesHelper.adjustZforState =function(stateName){
+  for (var layerName in FramerStatesSheet[stateName]) {
+    LayersByName[layerName].sendToBack();
+  }
+}
 
-window.LayersByName = loadLayers();
-FramerStatesHelper.switchInstant(FramerStatesHelper.cycle());
-if(AppLoad) AppLoad();
+FramerStatesHelper.extend = function(target, source) {
+  target = target || {};
+  for (var prop in source) {
+    if (typeof source[prop] === 'object') {
+      target[prop] = extend(target[prop], source[prop]);
+    } else {
+      target[prop] = source[prop];
+    }
+  }
+  return target;
+}
+
+FramerStatesHelper.extend(FramerStatesSheet, AppStates);
+
+window.LayersByName = loadLayers()
+FramerStatesHelper.switchInstant(FramerStatesHelper.cycle())
+if(AppLoad) AppLoad()

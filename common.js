@@ -86,59 +86,56 @@ function log_depth(message, depth) {
 // Currently unused CSS functions
 
 function extract_shadow_from(layer) {
-  //TODO: Get the blur properties
-  var styles = {}
-  var styleObjects = [[layer style] shadows]
-  log('Checking shadow'+' '+[styleObjects count]+' '+styles+' '+styleObjects)
-
-  var CSSShadow=false;
-  
-  for(var i=0;i<[styleObjects count];i++){
-    var shadowObject =[styleObjects objectAtIndex:i]
-    log('Found shadow'+shadowObject)
-    var shadowObjectColor = [shadowObject color]
-    var shadowColor='rgba('
-      +Math.round([shadowObjectColor red]*255)+','
-      +Math.round([shadowObjectColor green]*255)+','
-      +Math.round([shadowObjectColor blue]*255)+','
-      +[shadowObjectColor alpha]+')'
-    CSSShadow = [shadowObject offsetX]+'px '+[shadowObject offsetY]+'px '+[shadowObject blurRadius]+'px '+[shadowObject spread]+'px '+shadowColor;
-    
-    layer.style().shadows().removeStylePart(shadowObject)
+  var shadows = [[layer style] shadows];
+  if ([shadows count]) {
+    var shadow = [shadows firstObject];
+    return [shadow offsetX] + 'px ' + 
+           [shadow offsetY]+'px ' +
+           [shadow blurRadius]+ 'px ' + 
+           [shadow spread]+ 'px ' +
+           [[shadow color] stringValueWithAlpha:true];
   }
-  return CSSShadow;
-
 }
 
 
-function extract_style_from(shapeLayer) {
-  var CSSString = [shapeLayer CSSAttributeString];
-  var styles ={}
-  /*
-  var stylestemp = CSSString.split('\n');
-  
-  for (var i = 0; i < stylestemp.length ; i++) {
-    var values = stylestemp[i].split(':');
-    if(values.length>1 && stylestemp[i].indexOf('//')==-1 && stylestemp[i].indexOf('/*')==-1){
-      var attr = values[0].replace( /-(\w)/g, function _replace( $1, $2 ) {return $2.toUpperCase();});
-      var val = values[1].replace(';','').trim();
-      log('style values'+attr+':'+values[1].replace(';',''));
-      styles[attr] = val;
+function extract_style_from(layerGroup) {
+
+  log('extract_style_from(' + layerGroup + ')')
+
+  var child = [[layerGroup layers] firstObject]];
+
+  // If not shape layer inside, have to manually extract shadow
+  if ([[layerGroup layers] count] != 1 || [child className] != "MSShapeGroup" || [[child layers] count] != 1) {
+    return {
+      boxShadow: extract_shadow_from(layerGroup)
     }
-  } 
-  */
-
-  var shadow = extract_shadow_from(shapeLayer)
-
-  if(shadow){
-    styles.boxShadow = shadow;
-    log('putting shadow into styles attr'+shadow)
   }
 
-  //TODO Make styles if its a rectangle, but get border radius working first
-  return styles
-  //+'\n-webkit-transform: rotateZ('+shapeLayer.rotation()+'deg);'
+  var shape = [[child layers] firstObject];
+  // Only handle rectangles and ovals
+  if (!([shape className] == "MSRectangleShape" || [shape className] == "MSOvalShape")) {
+    return {};
+  }
 
+  var styles = {};
+  var cssString = [layerGroup CSSAttributeString];
+  var cssLines = cssString.split('\n');
+
+  cssLines.forEach(function(line) {
+    var values = line.split(":");
+    if (values.length > 1 && line.indexOf('//') == -1 && line.indexOf('/*') == -1) {
+      var attr = values[0].replace( /-(\w)/g, function _replace( $1, $2 ) {return $2.toUpperCase();});
+      var val = values[1].replace(';','').trim();
+      log('style values ' + attr +':' + values[1].replace(';',''));
+      styles[attr] = val;
+    }
+  });
+
+  if ([shape className] == "MSOvalShape") {
+    styles.borderRadius = "9999px";
+  }
+
+  return styles;
 }
 
 function lookForCSSBoxBackground(layer){
@@ -501,9 +498,11 @@ function process_layer_states(layer, artboardName, depth) {
           var metadataForMask = metadata_for(current);
           
           [layer resizeRoot]
-          metadataForMask.x += maskParentFrame.x;
-          metadataForMask.y += maskParentFrame.y;
-          layerState.maskFrame = metadataForMask
+          maskParentFrame.x = metadataForMask.x + maskParentFrame.x;
+          maskParentFrame.y = metadataForMask.y + maskParentFrame.y;
+          maskParentFrame.width = metadataForMask.width;
+          maskParentFrame.height = metadataForMask.height;
+          layerState.clip = true;
 
         }else{
           if(!is_bitmap(current)){
