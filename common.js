@@ -111,34 +111,40 @@ function extract_shadow_from(layer) {
 }
 
 
-function extract_style_from(shapeLayer) {
-  var CSSString = [shapeLayer CSSAttributeString];
-  var styles ={}
-  /*
-  var stylestemp = CSSString.split('\n');
-  
-  for (var i = 0; i < stylestemp.length ; i++) {
-    var values = stylestemp[i].split(':');
-    if(values.length>1 && stylestemp[i].indexOf('//')==-1 && stylestemp[i].indexOf('/*')==-1){
-      var attr = values[0].replace( /-(\w)/g, function _replace( $1, $2 ) {return $2.toUpperCase();});
-      var val = values[1].replace(';','').trim();
-      log('style values'+attr+':'+values[1].replace(';',''));
-      styles[attr] = val;
-    }
-  } 
-  */
+function extract_style_from(layerGroup) {
 
-  var shadow = extract_shadow_from(shapeLayer)
+  log('extract_style_from(' + layerGroup + ')')
 
-  if(shadow){
-    styles.boxShadow = shadow;
-    log('putting shadow into styles attr'+shadow)
+  var styles = {
+    boxShadow: extract_shadow_from(layerGroup)
+  };
+
+  var child = [[layerGroup layers] firstObject]];
+  if ([[layerGroup layers] count] != 1 || [[child layers] count] != 1 || [child className] != "MSShapeGroup") {
+    return styles;
   }
 
-  //TODO Make styles if its a rectangle, but get border radius working first
-  return styles
-  //+'\n-webkit-transform: rotateZ('+shapeLayer.rotation()+'deg);'
+  var shape = [[child layers] firstObject];
+  if ([shape className] == "MSOvalShape") {
+    styles.borderRadius = "9999px";
+  } else if ([shape className] != "MSRectangleShape") {
+    return styles;
+  }
 
+  var cssString = [layerGroup CSSAttributeString];
+  var cssLines = cssString.split('\n');
+
+  cssLines.forEach(function(line) {
+    var values = line.split(":");
+    if (values.length > 1 && line.indexOf('//') == -1 && line.indexOf('/*') == -1) {
+      var attr = values[0].replace( /-(\w)/g, function _replace( $1, $2 ) {return $2.toUpperCase();});
+      var val = values[1].replace(';','').trim();
+      log('style values ' + attr +':' + values[1].replace(';',''));
+      styles[attr] = val;
+    }
+  });
+
+  return styles;
 }
 
 function lookForCSSBoxBackground(layer){
