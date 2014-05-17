@@ -69,7 +69,7 @@ var loadLayers = function() {
 		LayersByName[layerName] = layer
 
 		if (layerName.toLowerCase().indexOf("draggable") != -1) {
-			layer.draggable = new ui.Draggable(layer)
+			layer.draggable.enabled = true;
 		}
 
 	}
