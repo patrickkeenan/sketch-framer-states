@@ -299,6 +299,7 @@ function addLayerToAssetsPage(layer, assetsPage) {
     var layerContext = [[layer style] contextSettings];
     [layerContext setOpacity:1];
     [layer setIsVisible:true];
+    [layer setRotation:0];
 
     var rect = [layer absoluteRect];
     var layerFrameHeightWithStyle = [rect height];
@@ -447,13 +448,12 @@ function process_layer_states(layer, artboardName, depth) {
       // metadata.modification = new Date();
     }
     layerState.frame.opacity = [[layerStyle contextSettings] opacity];
-    layerState.frame.rotationZ = [layer rotation];
+    layerState.frame.rotationZ = -[layer rotation];
     //layerState.frame.visible = [layer isVisible];
     if([layer isVisible] == 0) layerState.visible = false;
     else layerState.visible = true;
     
     layerState.style = extract_style_from(layer);
-    layerState.style.backgroundColor = 'transparent';
 
     // var styles = extract_style_from(layer)
     // for(var attr in styles){
@@ -501,8 +501,8 @@ function process_layer_states(layer, artboardName, depth) {
           var metadataForMask = metadata_for(current);
           
           [layer resizeRoot]
-          //metadataForMask.x = metadataForMask.x - maskParentFrame.x
-          //metadataForMask.y = metadataForMask.y - maskParentFrame.y
+          metadataForMask.x += maskParentFrame.x;
+          metadataForMask.y += maskParentFrame.y;
           layerState.maskFrame = metadataForMask
 
         }else{

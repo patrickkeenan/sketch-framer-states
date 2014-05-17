@@ -1,18 +1,19 @@
 /*
-	FRAMER 3 Layer States tool for SKETCH 3
+  FRAMER 3 Layer States tool for SKETCH 3
 */
 
 window.FramerStatesSheet = window.FramerStatesSheet || {};
 window.FramerStatesHelper = window.FramerStatesHelper || {stateNames:[]};
+Framer.Defaults.Layer.backgroundColor = 'transparent';
 Framer.Config.animationCurve = 'spring(500,30,0)';
 Framer.Config.animationDelay = 0;
 Framer.Config.animationTime = 1;
 
 var loadLayers = function() {
-	
+
 	var Layers = []
 	var LayersByName = {}
-	
+
 	createLayer = function(layerName,stateName) {
 		var layerInSheet = FramerStatesSheet[stateName][layerName]
 		
@@ -124,14 +125,15 @@ var loadLayers = function() {
 		nestLayer(layerName,layer.states._orderedStates[1])
 	}
 
-	FramerStatesHelper.cycle = Framer.Utils.cycle(FramerStatesHelper.stateNames)
+    FramerStatesHelper.cycle = Framer.Utils.cycle(FramerStatesHelper.stateNames)
 	
 	return LayersByName
-
 }
+
 FramerStatesHelper.has_state = function(layer,stateName){
 	return layer.states._states.hasOwnProperty(stateName)
 }
+
 FramerStatesHelper.switchInstant =function(stateName){
 	if(!stateName){
       for (var state in FramerStatesSheet) {
@@ -152,8 +154,8 @@ FramerStatesHelper.switchInstant =function(stateName){
       	}
     }
 }
+
 FramerStatesHelper.switch =function(stateName){
-	//console.log('moving',stateName)
 	FramerStatesHelper.adjustZforState(stateName);
 	for (var layerName in LayersByName) {
 		var layer = LayersByName[layerName]
@@ -181,13 +183,12 @@ FramerStatesHelper.switch =function(stateName){
     }
 }
 FramerStatesHelper.animateToNextState =function(){
-	FramerStatesHelper.switch(FramerStatesHelper.cycle())
+  FramerStatesHelper.switch(FramerStatesHelper.cycle())
 }
 FramerStatesHelper.switchEvents = function(stateName,layer){
 	var eventsInSheet = FramerStatesSheet[stateName][layer.name].events
 	if(eventsInSheet){
 		for(var ev in eventsInSheet){
-			console.log('found event',ev,eventsInSheet)
 			layer.on(ev,eventsInSheet[ev])
 		}	
 		if(eventsInSheet['load']){
@@ -207,24 +208,24 @@ FramerStatesHelper.update = function(obj) {
             var val = arguments[i][prop];
             try{
 
-            	if (typeof val == "object"){
-            		if(!obj[prop]) obj[prop] = {};
-	                FramerStatesHelper.update(obj[prop], val);
-            	}
-	            else{
-	                obj[prop] = val;	
-	            }
-	        }catch(e){
-	        	console.error(e)
-	        }
+              if (typeof val == "object"){
+                if(!obj[prop]) obj[prop] = {};
+                  FramerStatesHelper.update(obj[prop], val);
+              }
+              else{
+                  obj[prop] = val;  
+              }
+          }catch(e){
+            console.error(e)
+          }
             
         }
     }
     return obj;
 }
 
-FramerStatesHelper.update(FramerStatesSheet,AppStates)
+FramerStatesHelper.update(FramerStatesSheet,AppStates);
 
-window.LayersByName = loadLayers()
-FramerStatesHelper.switchInstant(FramerStatesHelper.cycle())
-if(AppLoad) AppLoad()
+window.LayersByName = loadLayers();
+FramerStatesHelper.switchInstant(FramerStatesHelper.cycle());
+if(AppLoad) AppLoad();

@@ -65,18 +65,6 @@ function copy_template_from_plugin(filename,toFolder){
   }
 }
 
-function download_file(url) {
-  var filename = url.replace(/^.*(\\|\/|\:)/, ''),
-      path = framer_folder + '/' + filename;
-  if ([file_manager fileExistsAtPath:path]) { return; }
-  var task = [[NSTask alloc] init],
-      argsArray = [NSArray arrayWithObjects:"-O", url, nil];
-  [task setCurrentDirectoryPath:framer_folder];
-  [task setLaunchPath:"/usr/bin/curl"];
-  [task setArguments:argsArray];
-  [task launch];
-}
-
 function create_files() {
   log("create_files");
   create_folder(target_folder);
@@ -105,7 +93,7 @@ function create_files() {
 }
 
 function generate_states(artboards) {
-  for (var artboardIndex = [artboards count] - 1; artboardIndex >= 0; artboardIndex--) {
+  for (var artboardIndex = 0; artboardIndex < [artboards count]; artboardIndex++) {
     var artboard = [artboards objectAtIndex:artboardIndex]
     var artboardName = sanitize_filename([artboard name]);
     var artboardLayers = [artboard layers];
