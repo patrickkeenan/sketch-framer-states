@@ -4,7 +4,7 @@ AppLoad = function(e) {
 	Framer.Config.animationTime = 1;
 	window.onclick =function(e) {
 		//This is a helper that moves you through all states
-		FramerStatesHelper.animateToNextState()
+		FramerStatesHelper.switchToNextState()
 	}
 }
 

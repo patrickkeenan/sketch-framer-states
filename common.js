@@ -111,8 +111,8 @@ function extract_shadow_from(layer) {
 }
 
 
-function extract_style_from(shapeLayer) {
-  var CSSString = [shapeLayer CSSAttributeString];
+function extract_style_from(layer) {
+  var CSSString = [layer CSSAttributeString];
   var styles ={}
   /*
   var stylestemp = CSSString.split('\n');
@@ -128,7 +128,7 @@ function extract_style_from(shapeLayer) {
   } 
   */
 
-  var shadow = extract_shadow_from(shapeLayer)
+  var shadow = extract_shadow_from(layer)
 
   if(shadow){
     styles.boxShadow = shadow;
@@ -137,7 +137,7 @@ function extract_style_from(shapeLayer) {
 
   //TODO Make styles if its a rectangle, but get border radius working first
   return styles
-  //+'\n-webkit-transform: rotateZ('+shapeLayer.rotation()+'deg);'
+  //+'\n-webkit-transform: rotateZ(layer.rotation()+'deg);'
 
 }
 
