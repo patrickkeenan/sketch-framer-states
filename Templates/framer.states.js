@@ -164,29 +164,19 @@ FramerStatesHelper.adjustZforState =function(stateName){
   }
 }
 
-FramerStatesHelper.update = function(obj) {
-    for (var i=1; i<arguments.length; i++) {
-        for (var prop in arguments[i]) {
-            var val = arguments[i][prop];
-            try{
-
-              if (typeof val == "object"){
-                if(!obj[prop]) obj[prop] = {};
-                  FramerStatesHelper.update(obj[prop], val);
-              }
-              else{
-                  obj[prop] = val;  
-              }
-          }catch(e){
-            console.error(e)
-          }
-            
-        }
+FramerStatesHelper.extend = function(target, source) {
+  target = target || {};
+  for (var prop in source) {
+    if (typeof source[prop] === 'object') {
+      target[prop] = extend(target[prop], source[prop]);
+    } else {
+      target[prop] = source[prop];
     }
-    return obj;
+  }
+  return target;
 }
 
-FramerStatesHelper.update(FramerStatesSheet,AppStates)
+FramerStatesHelper.extend(FramerStatesSheet, AppStates);
 
 window.LayersByName = loadLayers()
 FramerStatesHelper.switchInstant(FramerStatesHelper.cycle())
