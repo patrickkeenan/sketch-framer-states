@@ -39,19 +39,16 @@ function is_shape_container(layer) {
   return [[layer layers] count] == 1 && [child className] == "MSShapeGroup" && [[child layers] count] == 1);
 }
 
-function is_rectangle_or_oval(layer) {
-  if (!is_shape_container(layer)) { return false; }
+function shape_type(layer) {
+  if (!is_shape_container(layer)) { return; }
   var child = [[layer layers] firstObject];
   var shape = [[child layers] firstObject];
-  return ([shape className] == "MSRectangleShape" || [shape className] == "MSOvalShape"));
+  return [shape className];
 }
 
-function is_oval(layer) {
-  if (!is_shape_container) { return false; }
-  var child = [[layer layers] firstObject];
-  var shape = [[child layers] firstObject];
-  // Only handle rectangles and ovals
-  return ([shape className] == "MSOvalShape"));
+function should_use_css(layer) {
+  var shapeType = shape_type(layer);
+  return shapeType == "MSRectangleShape" || shapeType == "MSOvalShape";
 }
 
 function should_become_view(layer) {
@@ -120,7 +117,7 @@ function extract_style_from(layerGroup) {
   log('extract_style_from(' + layerGroup + ')')
 
   if (!is_shape_container(layerGroup)) { return { boxShadow: extract_shadow_from(layerGroup) }; }
-  if (!is_rectangle_or_oval(layerGroup)) { return {}; }
+  if (!should_use_css(layerGroup)) { return {}; }
 
   var styles = {};
   var cssString = [layerGroup CSSAttributeString];
@@ -136,7 +133,7 @@ function extract_style_from(layerGroup) {
     }
   });
 
-  if (is_oval(layerGroup)) {
+  if (shape_type(layerGroup) == "MSOvalShape") {
     styles.borderRadius = "9999px";
   }
 
@@ -293,7 +290,7 @@ function removeAssetsPage() {
 }
 
 function addLayerToAssetsPage(layer, assetsPage) {
-  if (is_group(layer) && should_become_view(layer) && !is_rectangle_or_oval(layer) && is_new_layer(layer)) {
+  if (is_group(layer) && should_become_view(layer) && !should_use_css(layer) && is_new_layer(layer)) {
     log('found that its new: '+is_new_layer(layer))
     var styles = {};
     assetsPage.addLayer(layer);
@@ -441,7 +438,7 @@ function process_layer_states(layer, artboardName, depth) {
     layerState.frame.rotationZ = -[layer rotation];
     layerState.visible = !![layer isVisible];
 
-    if(has_art(layer) && !is_rectangle_or_oval(layer)) {
+    if(has_art(layer) && !should_use_css(layer)) {
       layerState.image = "images/" + layerNameClean + ".png";
     }
     
