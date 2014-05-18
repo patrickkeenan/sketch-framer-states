@@ -1,3 +1,169 @@
+var FramerLibraryUrl;
+var show_errors = true;
+var keep_asset_page = true;
+
+/* Don't touch the following. They are auto-generated based on the Library URL. */
+var extra_script_line;
+var FramerLibraryFileName;
+
+if(FramerLibraryUrl) {
+  FramerLibraryFileName = FramerLibraryUrl.replace(/^.*(\\|\/|\:)/, '');
+  extra_script_line = "\n\t\t<script src=\"framer/" + FramerLibraryFileName + "\"></script>";
+}
+/* End of auto-generated block */
+
+/* Contents of index.html */
+var FramerIndexFileContents = "<!DOCTYPE html>\n<html>\n\t<head>\n\t\t<meta charset=\"utf-8\">\n\t\t\n\t\t<meta name=\"apple-mobile-web-app-capable\" content=\"yes\">\n\t\t<meta name=\"apple-mobile-web-app-status-bar-style\" content=\"black\">\n\t\t<meta name=\"format-detection\" content=\"telephone=no\">\n\t\t<meta name=\"viewport\" content=\"width=640,initial-scale=0.5,user-scalable=no\">\n\t\t\n\t\t<style type=\"text/css\" media=\"screen\">\n\t\t\n\t\t* {\n\t\t\tmargin:0;\n\t\t\tpadding:0;\n\t\t\tborder:none;\n\t\t\t-webkit-user-select:none;\n\t\t}\n\n\t\tbody {\n\t\t\tbackground-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAMAAAC6V+0/AAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAAZQTFRFMzMzDBMatgEYWQAAABhJREFUeNpiYIADRjhgGNKCw8UfcAAQYACltADJ8fw9RwAAAABJRU5ErkJggg==);\n\t\t\tfont: 28px/1em \"Helvetica\";\n\t\t\tcolor: #FFF;\n\t\t\t-webkit-tap-highlight-color: rgba(0,0,0,0);\n\t\t\t-webkit-perspective: 1000px;\n\t\t}\n\t\t\n\t\t::-webkit-scrollbar {\n\t\t\twidth: 0px;\n\t\t\theight: 0px;\n\t\t}\n\t\t\n\t\t</style>\n\t\t\n\t</head>\n\t<body>\n\t\t<script src=\"framer/framer.js\"></script>{{ views }}\n\t\t<script src=\"app.js\"></script>\n\t\t<script src=\"framer/framer.states.js\"></script>" + (extra_script_line || "") + "\n\t</body>\n</html>";
+
+var document_path = [[doc fileURL] path].split([doc displayName])[0],
+    document_name = [doc displayName].replace(".sketch",""),
+    target_folder = document_path + document_name,
+    images_folder = target_folder + "/images",
+    framer_folder = target_folder + "/framer",
+    home_folder = NSHomeDirectory(),
+    file_manager = [NSFileManager defaultManager],
+    AssetsOffset = 0,
+    states_metadata = {},
+    mainLayer = {},
+    layerNames ={},
+    assetsPage,
+    framerjs_url = "https://raw.githubusercontent.com/koenbok/FramerExamples/master/Examples/Animation%20-%20Basics.framer/framer/framer.js",
+    ASSETS_PAGE_NAME = "FramerComponents";
+
+
+function make_folder(path) {
+  log('making folder ' + path);
+  if (DRY_RUN) {
+    log("DRY_RUN, won't make folder " + path)
+    return
+  }
+  [[NSFileManager defaultManager] createDirectoryAtPath:path withIntermediateDirectories:true attributes:null error:null]
+}
+function make_export_folder(){
+  var path = image_folder()
+  make_folder(path)
+}
+function export_folder(){
+  var doc_folder = [[doc fileURL] path].replace([doc displayName], ''),
+      doc_name = [doc displayName].replace(".sketch","")
+  return doc_folder + doc_name + "/"
+}
+function image_folder(){
+  return export_folder() + "images/"
+}
+
+function create_file_from_string(filename,the_string) {
+  // log("save_file_from_string()")
+  if (DRY_RUN) {
+    log("DRY_RUN, won't save file " + filename)
+    return
+  }
+
+  var path = [@"" stringByAppendingString:filename],
+      str = [@"" stringByAppendingString:the_string]
+
+  [str writeToFile:path atomically:false encoding:NSUTF8StringEncoding error:null];
+}
+
+function copy_template_from_plugin(filename,toFolder){
+  var project_framerjs_path = toFolder+'/'+filename;
+  var plugin_framerjs_path = home_folder+'/Library/Application Support/com.bohemiancoding.sketch3/Plugins/sketch-framer-states/templates/'+filename;
+
+  log('fm: testing path '+plugin_framerjs_path)
+  log('fm: looking for orginal file '+plugin_framerjs_path)
+  
+  if ([file_manager fileExistsAtPath:project_framerjs_path]) {
+    log("fm: yes, "+ filename +" already exists");
+  }else{
+    log("fm: no "+filename+" does not exist");
+    if ([file_manager copyItemAtPath:plugin_framerjs_path toPath:project_framerjs_path error:nil]) {
+        log("fm: success in copying over "+filename);
+    } else {
+        log("fm: error in trying to copy "+filename);
+    }
+  }
+}
+
+function create_files() {
+  log("create_files");
+  make_folder(target_folder);
+  make_folder(framer_folder);
+  make_folder(images_folder);
+
+  // State data sheet
+  var JSON_States = JSON.stringify(states_metadata, null, 2).replace(/"(\w+)"\s*:/g, '$1:')
+  
+  var file_path = framer_folder + "/states." + document_name + ".js";
+  
+  var file_contents = "window.FramerStatesSheet = " + JSON_States +"\n";
+
+  var JSON_mainLayer = JSON.stringify(mainLayer, null, 2).replace(/"(\w+)"\s*:/g, '$1:')
+
+  file_contents += "Framer.Config.mainLayer = " + " new ScrollView("+ JSON_mainLayer +")" +"\n Framer.Config.mainLayer.style.backgroundColor='transparent'\n";
+
+  create_file_from_string(file_path, file_contents, true);
+
+  // Local template files
+  create_file_from_string(target_folder + "/index.html",  FramerIndexFileContents.replace("{{ views }}",'\n\t\t<script src="framer/states.' + document_name + '.js"></script>'));
+
+  copy_template_from_plugin('framer.js',framer_folder);
+  copy_template_from_plugin('framer.states.js',framer_folder);
+  copy_template_from_plugin('app.js',target_folder);
+
+}
+
+function generate_states(artboards) {
+  for (var artboardIndex = 0; artboardIndex < [artboards count]; artboardIndex++) {
+    var artboard = [artboards objectAtIndex:artboardIndex]
+    var artboardName = sanitize_filename([artboard name]);
+    var artboardLayers = [artboard layers];
+
+    states_metadata[artboardName] = {};
+
+    log('checking artboard ' + artboardName + ' ' + [artboardLayers count]);
+
+    for (var layerIndex = [artboardLayers count]-1; layerIndex >= 0 ; layerIndex--) {
+      var layer = [artboardLayers objectAtIndex:layerIndex];
+      var layerName = sanitize_filename([layer name]);
+
+      log('checking first layer '+ layerName);
+
+      process_layer_states(layer, artboardName, 0);
+    }
+
+  }
+}
+function check_for_errors(){
+  var errors = []
+  if (!document_is_saved()) {
+    errors.push("— Please save your document to export it.")
+  }
+
+  // if ([[doc pages] count] > 1) {
+  //   errors.push("— Multiple pages are not yet supported.")
+  // }
+
+  return errors.join("\n")
+}
+function document_is_saved(){
+  return [doc fileURL] != null
+}
+function document_has_artboards(){
+  return [[[doc currentPage] artboards] count] > 0
+}
+function alert(msg){
+  [[NSApplication sharedApplication] displayDialog:msg withTitle:"Sketch Framer found some errors"]
+  // alternatively, we could do:
+  // [doc showMessage:msg]
+  // but maybe that's too subtle for an alert :)
+}
+
+function export_layers() {
+  for (var i in layerNames){
+    export_layer(layerNames[i]);
+  }
+}
+
 function is_new_layer(layer){
   var newRect = [layer absoluteRect]
   var newSize = [newRect width] + [newRect height]
@@ -159,6 +325,11 @@ function lookForCSSBoxBackground(layer){
 
 function export_layer(layer) {
 
+  if (DRY_RUN) {
+    log("DRY_RUN, won't export assets")
+    return
+  }
+
   var layerClass = [layer class];
   var layerName = [layer name];
 
@@ -174,19 +345,25 @@ function export_layer(layer) {
     [layer setIsVisible:true];
 
     //var layerRect = [layer rectByAccountingForStyleSize:[[layer absoluteRect] rect]]
-    log("Exporting <" + layerName + ">");
+    
 
     var filename = images_folder + "/" + sanitize_filename(layerName) + ".png";
+    log("Exporting <" + layerName + "> to "+filename);
 
-    var slice = [MSSlice sliceWithRect:[[layer absoluteRect] rect] scale:2];
+    //var slice = [MSSlice sliceWithRect:[[layer absoluteRect] rect] scale:2];
+    var slice = [[MSSliceMaker slicesFromExportableLayer:layer] firstObject]
+    //slice.page = [doc currentPage]
+    
+    var imageData = [MSSliceExporter dataForSlice:slice format:@"png"]
+    [imageData writeToFile:filename atomically:false]
 
-    if (in_sandbox()) {
-      sandboxAccess.accessFilePath_withBlock_persistPermission(target_folder, function(){
-        [doc saveArtboardOrSlice:slice toFile:filename];
-      }, true)
-    } else {
-      [doc saveArtboardOrSlice:slice toFile:filename];
-    }
+    // if (in_sandbox()) {
+    //   sandboxAccess.accessFilePath_withBlock_persistPermission(target_folder, function(){
+    //     [doc saveArtboardOrSlice:slice toFile:filename];
+    //   }, true)
+    // } else {
+    //   [doc saveArtboardOrSlice:slice toFile:filename];
+    // }
 
   }
 
