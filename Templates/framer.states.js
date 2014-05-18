@@ -18,7 +18,7 @@ var loadLayers = function() {
     var layerInfo = {
       name: layerName,
       frame: layerInSheet.frame,
-      image: layerInSheet.image && layerInSheet.image.path,
+      image: layerInSheet.image,
       visible: layerInSheet.visible,
       rotationZ: layerInSheet.frame.rotationZ,
       opacity: layerInSheet.frame.opacity,

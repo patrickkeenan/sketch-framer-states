@@ -34,6 +34,26 @@ function is_bitmap(layer) {
   return [layer isMemberOfClass:[MSBitmapLayer class]]
 }
 
+function is_shape_container(layer) {
+  var child = [[layer layers] firstObject];
+  return [[layer layers] count] == 1 && [child className] == "MSShapeGroup" && [[child layers] count] == 1);
+}
+
+function is_rectangle_or_oval(layer) {
+  if (!is_shape_container(layer)) { return false; }
+  var child = [[layer layers] firstObject];
+  var shape = [[child layers] firstObject];
+  return ([shape className] == "MSRectangleShape" || [shape className] == "MSOvalShape"));
+}
+
+function is_oval(layer) {
+  if (!is_shape_container) { return false; }
+  var child = [[layer layers] firstObject];
+  var shape = [[child layers] firstObject];
+  // Only handle rectangles and ovals
+  return ([shape className] == "MSOvalShape"));
+}
+
 function should_become_view(layer) {
   var layerName = [layer name]
   return is_group(layer) || layerName.slice(-1) == '+';
@@ -83,8 +103,6 @@ function log_depth(message, depth) {
   log(padding + " " + message);
 }
 
-// Currently unused CSS functions
-
 function extract_shadow_from(layer) {
   var shadows = [[layer style] shadows];
   if ([shadows count]) {
@@ -97,25 +115,12 @@ function extract_shadow_from(layer) {
   }
 }
 
-
 function extract_style_from(layerGroup) {
 
   log('extract_style_from(' + layerGroup + ')')
 
-  var child = [[layerGroup layers] firstObject]];
-
-  // If not shape layer inside, have to manually extract shadow
-  if ([[layerGroup layers] count] != 1 || [child className] != "MSShapeGroup" || [[child layers] count] != 1) {
-    return {
-      boxShadow: extract_shadow_from(layerGroup)
-    }
-  }
-
-  var shape = [[child layers] firstObject];
-  // Only handle rectangles and ovals
-  if (!([shape className] == "MSRectangleShape" || [shape className] == "MSOvalShape")) {
-    return {};
-  }
+  if (!is_shape_container(layerGroup)) { return { boxShadow: extract_shadow_from(layerGroup) }; }
+  if (!is_rectangle_or_oval(layerGroup)) { return {}; }
 
   var styles = {};
   var cssString = [layerGroup CSSAttributeString];
@@ -131,7 +136,7 @@ function extract_style_from(layerGroup) {
     }
   });
 
-  if ([shape className] == "MSOvalShape") {
+  if (is_oval(layerGroup)) {
     styles.borderRadius = "9999px";
   }
 
@@ -288,7 +293,7 @@ function removeAssetsPage() {
 }
 
 function addLayerToAssetsPage(layer, assetsPage) {
-  if (is_group(layer) && should_become_view(layer) && is_new_layer(layer)!=false) {
+  if (is_group(layer) && should_become_view(layer) && !is_rectangle_or_oval(layer) && is_new_layer(layer)) {
     log('found that its new: '+is_new_layer(layer))
     var styles = {};
     assetsPage.addLayer(layer);
@@ -431,31 +436,16 @@ function process_layer_states(layer, artboardName, depth) {
     log('making layer sheet object: '+layerNameClean)
     var layerState = states_metadata[artboardName][layerNameClean]
     
-    layerState.frame = layerFrame
-    //log("checking frame"+layerNameClean+' '+states_metadata[artboardName][layerNameClean].frame.x)
-
-    if(has_art(layer)) {
-      log('layer has art '+layer)
-      layerState.image = {
-        path: "images/" + layerNameClean + ".png"
-        //frame: layerFrame //TODO: Why do we need this?
-      };
-      layerState.imageType = "png";
-      // TODO: Find out how the modification hash is calculated in Framer.app
-      // metadata.modification = new Date();
-    }
+    layerState.frame = layerFrame;
     layerState.frame.opacity = [[layerStyle contextSettings] opacity];
     layerState.frame.rotationZ = -[layer rotation];
-    //layerState.frame.visible = [layer isVisible];
-    if([layer isVisible] == 0) layerState.visible = false;
-    else layerState.visible = true;
+    layerState.visible = !![layer isVisible];
+
+    if(has_art(layer) && !is_rectangle_or_oval(layer)) {
+      layerState.image = "images/" + layerNameClean + ".png";
+    }
     
     layerState.style = extract_style_from(layer);
-
-    // var styles = extract_style_from(layer)
-    // for(var attr in styles){
-    //   layerState.style[attr] = styles[attr]
-    // }
 
     // TODO: Make layer names have animation properities
     // if(layerName.indexOf('delay') > -1){
