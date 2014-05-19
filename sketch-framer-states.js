@@ -1,77 +1,102 @@
-var FramerLibraryUrl;
-var show_errors = true;
-var keep_asset_page = true;
 
-/* Don't touch the following. They are auto-generated based on the Library URL. */
-var extra_script_line;
-var FramerLibraryFileName;
 
-if(FramerLibraryUrl) {
-  FramerLibraryFileName = FramerLibraryUrl.replace(/^.*(\\|\/|\:)/, '');
-  extra_script_line = "\n\t\t<script src=\"framer/" + FramerLibraryFileName + "\"></script>";
+function create_files(file_manager, document_name,target_folder,images_folder,framer_folder,home_folder,states_metadata) {
+  make_folder(file_manager, target_folder);
+  make_folder(file_manager, framer_folder);
+  make_folder(file_manager, images_folder);
+
+  // State data sheet
+  var JSON_States = JSON.stringify(states_metadata, nil, 2).replace(/"(\w+)"\s*:/g, '$1:')
+  
+  var file_path = framer_folder + "/states." + document_name + ".js";
+  
+  var file_contents = "window.FramerStatesSheet = " + JSON_States +"\n";
+
+  // var JSON_mainLayer = JSON.stringify(mainLayer, nil, 2).replace(/"(\w+)"\s*:/g, '$1:')
+  // file_contents += "Framer.Config.mainLayer = " + " new ScrollView("+ JSON_mainLayer +")" +"\n Framer.Config.mainLayer.style.backgroundColor='transparent'\n";
+
+  create_file_from_string(file_path, file_contents, true);
+
+  // Local template files
+  var FramerIndexFileContents = "<!DOCTYPE html>\n<html>\n\t<head>\n\t\t<meta charset=\"utf-8\">\n\t\t\n\t\t<meta name=\"apple-mobile-web-app-capable\" content=\"yes\">\n\t\t<meta name=\"apple-mobile-web-app-status-bar-style\" content=\"black\">\n\t\t<meta name=\"format-detection\" content=\"telephone=no\">\n\t\t<meta name=\"viewport\" content=\"width=640,initial-scale=0.5,user-scalable=no\">\n\t\t\n\t\t<style type=\"text/css\" media=\"screen\">\n\t\t\n\t\t* {\n\t\t\tmargin:0;\n\t\t\tpadding:0;\n\t\t\tborder:none;\n\t\t\t-webkit-user-select:none;\n\t\t}\n\n\t\tbody {\n\t\t\tbackground-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAMAAAC6V+0/AAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAAZQTFRFMzMzDBMatgEYWQAAABhJREFUeNpiYIADRjhgGNKCw8UfcAAQYACltADJ8fw9RwAAAABJRU5ErkJggg==);\n\t\t\tfont: 28px/1em \"Helvetica\";\n\t\t\tcolor: #FFF;\n\t\t\t-webkit-tap-highlight-color: rgba(0,0,0,0);\n\t\t\t-webkit-perspective: 1000px;\n\t\t}\n\t\t\n\t\t::-webkit-scrollbar {\n\t\t\twidth: 0px;\n\t\t\theight: 0px;\n\t\t}\n\t\t\n\t\t</style>\n\t\t\n\t</head>\n\t<body>\n\t\t<script src=\"framer/framer.js\"></script>{{ views }}\n\t\t<script src=\"app.js\"></script>\n\t\t<script src=\"framer/framer.states.js\"></script>\n\t</body>\n</html>"; 
+  create_file_from_string(target_folder + "/index.html",  FramerIndexFileContents.replace("{{ views }}",'\n\t\t<script src="framer/states.' + document_name + '.js"></script>'));
+
+  copy_template_from_plugin(file_manager, home_folder,'framer.js',framer_folder);
+  copy_template_from_plugin(file_manager, home_folder,'framer.states.js',framer_folder);
+  copy_template_from_plugin(file_manager, home_folder,'app.js',target_folder);
+
 }
-/* End of auto-generated block */
 
-/* Contents of index.html */
-var FramerIndexFileContents = "<!DOCTYPE html>\n<html>\n\t<head>\n\t\t<meta charset=\"utf-8\">\n\t\t\n\t\t<meta name=\"apple-mobile-web-app-capable\" content=\"yes\">\n\t\t<meta name=\"apple-mobile-web-app-status-bar-style\" content=\"black\">\n\t\t<meta name=\"format-detection\" content=\"telephone=no\">\n\t\t<meta name=\"viewport\" content=\"width=640,initial-scale=0.5,user-scalable=no\">\n\t\t\n\t\t<style type=\"text/css\" media=\"screen\">\n\t\t\n\t\t* {\n\t\t\tmargin:0;\n\t\t\tpadding:0;\n\t\t\tborder:none;\n\t\t\t-webkit-user-select:none;\n\t\t}\n\n\t\tbody {\n\t\t\tbackground-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAMAAAC6V+0/AAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAAZQTFRFMzMzDBMatgEYWQAAABhJREFUeNpiYIADRjhgGNKCw8UfcAAQYACltADJ8fw9RwAAAABJRU5ErkJggg==);\n\t\t\tfont: 28px/1em \"Helvetica\";\n\t\t\tcolor: #FFF;\n\t\t\t-webkit-tap-highlight-color: rgba(0,0,0,0);\n\t\t\t-webkit-perspective: 1000px;\n\t\t}\n\t\t\n\t\t::-webkit-scrollbar {\n\t\t\twidth: 0px;\n\t\t\theight: 0px;\n\t\t}\n\t\t\n\t\t</style>\n\t\t\n\t</head>\n\t<body>\n\t\t<script src=\"framer/framer.js\"></script>{{ views }}\n\t\t<script src=\"app.js\"></script>\n\t\t<script src=\"framer/framer.states.js\"></script>" + (extra_script_line || "") + "\n\t</body>\n</html>";
+function generate_states(artboards,states_metadata) {
+  for (var artboardIndex = 0; artboardIndex < [artboards count]; artboardIndex++) {
+    var artboard = [artboards objectAtIndex:artboardIndex]
+    var artboardName = sanitize_filename([artboard name]);
+    var artboardLayers = [artboard layers];
 
-var document_path = [[doc fileURL] path].split([doc displayName])[0],
-    document_name = [doc displayName].replace(".sketch",""),
-    target_folder = document_path + document_name,
-    images_folder = target_folder + "/images",
-    framer_folder = target_folder + "/framer",
-    home_folder = NSHomeDirectory(),
-    file_manager = [NSFileManager defaultManager],
-    AssetsOffset = 0,
-    states_metadata = {},
-    mainLayer = {},
-    layerNames ={},
-    assetsPage,
-    framerjs_url = "https://raw.githubusercontent.com/koenbok/FramerExamples/master/Examples/Animation%20-%20Basics.framer/framer/framer.js",
-    ASSETS_PAGE_NAME = "FramerComponents";
+    states_metadata[artboardName] = {};
 
+    for (var layerIndex = [artboardLayers count]-1; layerIndex >= 0 ; layerIndex--) {
+      var layer = [artboardLayers objectAtIndex:layerIndex];
+      var layerName = sanitize_filename([layer name]);
 
-function make_folder(path) {
-  log('making folder ' + path);
-  if (DRY_RUN) {
-    log("DRY_RUN, won't make folder " + path)
-    return
+      states_metadata = process_layer_states(layer, artboardName, 0, states_metadata);
+    }
+
   }
-  [[NSFileManager defaultManager] createDirectoryAtPath:path withIntermediateDirectories:true attributes:null error:null]
+  return states_metadata;
 }
-function make_export_folder(){
-  var path = image_folder()
-  make_folder(path)
+
+function export_layers(images_folder, ASSETS_PAGE_NAME) {
+  var assetsPage = findAssetsPage(ASSETS_PAGE_NAME)
+  var sublayers = [[assetsPage layers] array]
+  for (var sub=0; sub < sublayers.count(); sub++) {
+    var sublayer = sublayers.objectAtIndex(sub);
+    export_layer(sublayer , images_folder);
+  }
 }
-function export_folder(){
-  var doc_folder = [[doc fileURL] path].replace([doc displayName], ''),
-      doc_name = [doc displayName].replace(".sketch","")
-  return doc_folder + doc_name + "/"
+
+function export_layer(layer,images_folder) {
+
+  var layerClass = [layer class];
+  var layerName = [layer name];
+
+  if (should_ignore_layer(layer)) {
+    return;
+  }
+
+  if(should_become_view(layer)){
+    [layer setIsVisible:true];
+    var filename = images_folder + "/" + sanitize_filename(layerName) + ".png";
+    var slice = [[MSSliceMaker slicesFromExportableLayer:layer] firstObject]
+    
+    var imageData = [MSSliceExporter dataForSlice:slice format:@"png"]
+    [imageData writeToFile:filename atomically:false]
+  }
+
+  if (layerName.indexOf("@@mask") != -1) {
+    var _name = layerName.replace("@@mask", "");
+    [layer setHasClippingMask:true];
+    [layer setName:_name];
+  }
+  
 }
-function image_folder(){
-  return export_folder() + "images/"
+
+
+function make_folder(file_manager, path) {
+  [file_manager createDirectoryAtPath:path withIntermediateDirectories:true attributes:nil error:nil]
 }
 
 function create_file_from_string(filename,the_string) {
-  // log("save_file_from_string()")
-  if (DRY_RUN) {
-    log("DRY_RUN, won't save file " + filename)
-    return
-  }
-
   var path = [@"" stringByAppendingString:filename],
       str = [@"" stringByAppendingString:the_string]
 
-  [str writeToFile:path atomically:false encoding:NSUTF8StringEncoding error:null];
+  [str writeToFile:path atomically:false encoding:NSUTF8StringEncoding error:nil];
 }
 
-function copy_template_from_plugin(filename,toFolder){
+function copy_template_from_plugin(file_manager, home_folder,filename,toFolder){
   var project_framerjs_path = toFolder+'/'+filename;
   var plugin_framerjs_path = home_folder+'/Library/Application Support/com.bohemiancoding.sketch3/Plugins/sketch-framer-states/templates/'+filename;
 
-  log('fm: testing path '+plugin_framerjs_path)
-  log('fm: looking for orginal file '+plugin_framerjs_path)
-  
   if ([file_manager fileExistsAtPath:project_framerjs_path]) {
     log("fm: yes, "+ filename +" already exists");
   }else{
@@ -84,132 +109,38 @@ function copy_template_from_plugin(filename,toFolder){
   }
 }
 
-function create_files() {
-  log("create_files");
-  make_folder(target_folder);
-  make_folder(framer_folder);
-  make_folder(images_folder);
-
-  // State data sheet
-  var JSON_States = JSON.stringify(states_metadata, null, 2).replace(/"(\w+)"\s*:/g, '$1:')
-  
-  var file_path = framer_folder + "/states." + document_name + ".js";
-  
-  var file_contents = "window.FramerStatesSheet = " + JSON_States +"\n";
-
-  var JSON_mainLayer = JSON.stringify(mainLayer, null, 2).replace(/"(\w+)"\s*:/g, '$1:')
-
-  file_contents += "Framer.Config.mainLayer = " + " new ScrollView("+ JSON_mainLayer +")" +"\n Framer.Config.mainLayer.style.backgroundColor='transparent'\n";
-
-  create_file_from_string(file_path, file_contents, true);
-
-  // Local template files
-  create_file_from_string(target_folder + "/index.html",  FramerIndexFileContents.replace("{{ views }}",'\n\t\t<script src="framer/states.' + document_name + '.js"></script>'));
-
-  copy_template_from_plugin('framer.js',framer_folder);
-  copy_template_from_plugin('framer.states.js',framer_folder);
-  copy_template_from_plugin('app.js',target_folder);
-
-}
-
-function generate_states(artboards) {
-  for (var artboardIndex = 0; artboardIndex < [artboards count]; artboardIndex++) {
-    var artboard = [artboards objectAtIndex:artboardIndex]
-    var artboardName = sanitize_filename([artboard name]);
-    var artboardLayers = [artboard layers];
-
-    states_metadata[artboardName] = {};
-
-    log('checking artboard ' + artboardName + ' ' + [artboardLayers count]);
-
-    for (var layerIndex = [artboardLayers count]-1; layerIndex >= 0 ; layerIndex--) {
-      var layer = [artboardLayers objectAtIndex:layerIndex];
-      var layerName = sanitize_filename([layer name]);
-
-      log('checking first layer '+ layerName);
-
-      process_layer_states(layer, artboardName, 0);
-    }
-
-  }
-}
 function check_for_errors(){
   var errors = []
   if (!document_is_saved()) {
     errors.push("— Please save your document to export it.")
   }
 
-  // if ([[doc pages] count] > 1) {
-  //   errors.push("— Multiple pages are not yet supported.")
-  // }
-
   return errors.join("\n")
 }
 function document_is_saved(){
-  return [doc fileURL] != null
-}
-function document_has_artboards(){
-  return [[[doc currentPage] artboards] count] > 0
-}
-function alert(msg){
-  [[NSApplication sharedApplication] displayDialog:msg withTitle:"Sketch Framer found some errors"]
-  // alternatively, we could do:
-  // [doc showMessage:msg]
-  // but maybe that's too subtle for an alert :)
-}
-
-function export_layers() {
-  for (var i in layerNames){
-    export_layer(layerNames[i]);
-  }
-}
-
-function is_new_layer(layer){
-  var newRect = [layer absoluteRect]
-  var newSize = [newRect width] + [newRect height]
-
-  for(var i in layerNames){
-    var compareLayer = layerNames[i]
-    var compareRect = [compareLayer absoluteRect]
-    var compareSize = [compareRect width] + [compareRect height]
-    
-    if(i == [layer name]){
-      log('is new not: '+[layer name] + ' '+ i)
-      if(compareSize >= newSize){
-        log('new: but is smaller')
-        return false  
-      }else{
-        log('new: but is bigger')
-        [compareLayer removeFromParent];
-        layerNames[i] = layer;
-        return true;
-      }
-    }
-  }
-  layerNames[[layer name]] = layer;
-  return true;
+  return [doc fileURL] != nil
 }
 
 function is_group(layer) {
-  var isGroup = [layer isMemberOfClass:[MSLayerGroup class]];
-  var isArtboard = [layer isMemberOfClass:[MSArtboardGroup class]]
+  var isGroup = ([layer class] == 'MSLayerGroup');
+  var isArtboard = ([layer class] == 'MSArtboardGroup')
   return isGroup || isArtboard
 }
 
 function is_bitmap(layer) {
-  return [layer isMemberOfClass:[MSBitmapLayer class]]
+  return ([layer class] == 'MSBitmapLayer')
 }
 
 function is_shape_container(layer) {
   var child = [[layer layers] firstObject];
-  return [[layer layers] count] == 1 && [child className] == "MSShapeGroup" && [[child layers] count] == 1);
+  return ([[layer layers] count] == 1 && [child class] == "MSShapeGroup" && [[child layers] count] == 1);
 }
 
 function shape_type(layer) {
   if (!is_shape_container(layer)) { return; }
   var child = [[layer layers] firstObject];
   var shape = [[child layers] firstObject];
-  return [shape className];
+  return [shape class];
 }
 
 function should_use_css(layer) {
@@ -224,8 +155,7 @@ function should_become_view(layer) {
 
 function should_ignore_layer(layer) {
   var layerName = [layer name]
-  log('checking layer name for minus '+layerName)
-  return layerName.slice(-1) == '-' || [layer className] == "MSPage";
+  return layerName.slice(-1) == '-' || [layer class] == "MSPage";
 }
 
 function sanitize_filename(name){
@@ -233,7 +163,6 @@ function sanitize_filename(name){
 }
 
 function has_art(layer) {
-  // return true;
   if(is_group(layer) && !should_flatten_layer(layer)) {
     var has_art = false;
     var sublayers = [layer layers];
@@ -252,18 +181,10 @@ function has_art(layer) {
 function should_flatten_layer(layer) {
   var layerName = [layer name]
   if(layerName.slice(-1) == "*") {
-    return true;
-  } else {
     return false;
+  } else {
+    return true;
   }
-}
-
-function log_depth(message, depth) {
-  var padding = "";
-  for(var i=0; i<depth; i++) {
-    padding += ">"
-  }
-  log(padding + " " + message);
 }
 
 function extract_shadow_from(layer) {
@@ -280,8 +201,6 @@ function extract_shadow_from(layer) {
 
 function extract_style_from(layerGroup) {
 
-  log('extract_style_from(' + layerGroup + ')')
-
   if (!is_shape_container(layerGroup)) { return { boxShadow: extract_shadow_from(layerGroup) }; }
   if (!should_use_css(layerGroup)) { return {}; }
 
@@ -294,7 +213,6 @@ function extract_style_from(layerGroup) {
     if (values.length > 1 && line.indexOf('//') == -1 && line.indexOf('/*') == -1) {
       var attr = values[0].replace( /-(\w)/g, function _replace( $1, $2 ) {return $2.toUpperCase();});
       var val = values[1].replace(';','').trim();
-      log('style values ' + attr +':' + values[1].replace(';',''));
       styles[attr] = val;
     }
   });
@@ -323,104 +241,8 @@ function lookForCSSBoxBackground(layer){
   return CSSBoxBackground;
 }
 
-function export_layer(layer) {
 
-  if (DRY_RUN) {
-    log("DRY_RUN, won't export assets")
-    return
-  }
-
-  var layerClass = [layer class];
-  var layerName = [layer name];
-
-  if (should_ignore_layer(layer)) {
-    log("Ignoring <" + layerName + "> of type <" + layerClass + "> ");
-    return;
-  }
-
-  if(should_become_view(layer)){
-    log("Processing <" + layerName + "> of type <" + layerClass + "> ");
-    // If layer is a group, do:
-
-    [layer setIsVisible:true];
-
-    //var layerRect = [layer rectByAccountingForStyleSize:[[layer absoluteRect] rect]]
-    
-
-    var filename = images_folder + "/" + sanitize_filename(layerName) + ".png";
-    log("Exporting <" + layerName + "> to "+filename);
-
-    //var slice = [MSSlice sliceWithRect:[[layer absoluteRect] rect] scale:2];
-    var slice = [[MSSliceMaker slicesFromExportableLayer:layer] firstObject]
-    //slice.page = [doc currentPage]
-    
-    var imageData = [MSSliceExporter dataForSlice:slice format:@"png"]
-    [imageData writeToFile:filename atomically:false]
-
-    // if (in_sandbox()) {
-    //   sandboxAccess.accessFilePath_withBlock_persistPermission(target_folder, function(){
-    //     [doc saveArtboardOrSlice:slice toFile:filename];
-    //   }, true)
-    // } else {
-    //   [doc saveArtboardOrSlice:slice toFile:filename];
-    // }
-
-  }
-
-  if (layerName.indexOf("@@mask") != -1) {
-    var _name = layerName.replace("@@mask", "");
-    log("Re-enabling mask " + _name);
-    [layer setHasClippingMask:true];
-    [layer setName:_name];
-  }
-  
-}
-
-function mask_bounds(layer) {
-  var sublayers = [layer layers];
-  var effective_mask = null;
-
-  for (var sub=0; sub < [sublayers count]; sub++) {
-    var current = [sublayers objectAtIndex:sub];
-    if(current && [current hasClippingMask]) {
-      // If a native mask is detected, rename it and disable it (for now) so we can export its contents
-      var _name = [current name] + "@@mask";
-      [current setName:_name];
-      [current setHasClippingMask:false];
-      log("Disabling mask " + [current name]);
-
-      if (!effective_mask) {
-        // Only the bottom-most one will be effective
-        log("Effective mask " + _name)
-        effective_mask = current
-      }
-    }
-  }
-
-  if (effective_mask) {
-    return metadata_for(effective_mask);
-  } else {
-    return null;
-  }
-}
-
-function calculate_real_position_for(layer) {
-
-  var gkrect = [GKRect rectWithRect:[layer rectByAccountingForStyleSize:[[layer absoluteRect] rect]]],
-      absrect = [layer absoluteRect];
-
-  var rulerDeltaX = [absrect rulerX] - [absrect x],
-      rulerDeltaY = [absrect rulerY] - [absrect y],
-      GKRectRulerX = [gkrect x] + rulerDeltaX,
-      GKRectRulerY = [gkrect y] + rulerDeltaY;
-
-  return {
-    x: Math.round(GKRectRulerX),
-    y: Math.round(GKRectRulerY)
-  }
-}
-
-function findAssetsPage() {
+function findAssetsPage(ASSETS_PAGE_NAME) {
   var pages = [doc pages];
   for (var p = 0; p < [pages count]; p++) {
     var page = [pages objectAtIndex:p];
@@ -428,47 +250,58 @@ function findAssetsPage() {
       return page;
     }
   }
+  return false;
 }
 
-function updateAssetsPage(artboards) {
+function updateAssetsPage(artboards,ASSETS_PAGE_NAME) {
   
-  removeAssetsPage();
+  removeAssetsPage(ASSETS_PAGE_NAME);
 
   assetsPage = [doc addBlankPage];
   [assetsPage setName:ASSETS_PAGE_NAME];
 
   var artboardCount = [artboards count]
 
+  var copiedArtboards = [];
+
   for (var artboardIndex = [artboards count] - 1; artboardIndex >= 0; artboardIndex--) {
     var artboard = [artboards objectAtIndex:artboardIndex];
-    var artboardName = sanitize_filename([artboard name]);
 
     var copyOfArtboard = [artboard copy];
+    [[copyOfArtboard frame] setX:[[copyOfArtboard frame] x] + 5000];
 
     assetsPage.addLayer(copyOfArtboard);
-    
-    var copyOfArtboardLayers = [copyOfArtboard layers];
+    copiedArtboards.push(copyOfArtboard);
+  }
 
+  var AssetsOffset = 0;
+  for(var artboardIndex = 0; artboardIndex < copiedArtboards.length ; artboardIndex++){
+    var copyOfArtboard = copiedArtboards[artboardIndex];
+    var copyOfArtboardLayers = [copyOfArtboard layers];
     for (var l = 0; l < [copyOfArtboardLayers count]; l++) {
       var layer = [copyOfArtboardLayers objectAtIndex:l];
-      addLayerToAssetsPage(layer, assetsPage);
-    }
+      var layerName = [layer name];
 
+      if(!addedLayers[layerName]){
+        AssetsOffset = addLayerToAssetsPage(layer, assetsPage, AssetsOffset);
+        addedLayers[layerName] = layer;
+      }
+    }
     [copyOfArtboard removeFromParent];
   }
+  
 
   return assetsPage;
 }
-function removeAssetsPage() {
-  var assetsPage = findAssetsPage()
+function removeAssetsPage(ASSETS_PAGE_NAME) {
+  var assetsPage = findAssetsPage(ASSETS_PAGE_NAME)
   if (assetsPage) {
     [doc removePage:assetsPage];
   }
 }
 
-function addLayerToAssetsPage(layer, assetsPage) {
-  if (is_group(layer) && should_become_view(layer) && !should_use_css(layer) && is_new_layer(layer)) {
-    log('found that its new: '+is_new_layer(layer))
+function addLayerToAssetsPage(layer, assetsPage, AssetsOffset) {
+  if (is_group(layer) && should_become_view(layer)){ // && !should_use_css(layer)) {
     var styles = {};
     assetsPage.addLayer(layer);
 
@@ -482,8 +315,6 @@ function addLayerToAssetsPage(layer, assetsPage) {
     var orginalRect = [GKRect rectWithRect:[[layer absoluteRect] rect]];
     var layerFrameHeight = [orginalRect height];
 
-    //log('height with style '+layerFrameHeightWithStyle)
-    
     var label = assetsPage.addLayerOfType("text");
     var layerName = [layer name] || "Undefined layer";
     [label setName:"label for " + layerName];
@@ -523,38 +354,21 @@ function addLayerToAssetsPage(layer, assetsPage) {
 
     for (var sub = ([sublayers count] - 1); sub >= 0; sub--) {
       var current = [sublayers objectAtIndex:sub];
-      log('adding '+current)
-      if(!should_flatten_layer(layer) && is_group(current) && should_become_view(current)){
+      var currentName = [current name];
+      if(!should_flatten_layer(layer) && is_group(current) && should_become_view(current) && !addedLayers[currentName]){
         [current removeFromParent]
-        addLayerToAssetsPage(current,assetsPage)
+        AssetsOffset = addLayerToAssetsPage(current,assetsPage,AssetsOffset)
+        addedLayers[currentName] = current;
       }
-      /*
-      if(current.hasClippingMask()) {
-        [current setHasClippingMask:false]
-        var maskParent = current.parentGroup();
-        var maskParentFrame = maskParent.frame();
-        maskParent.resizeRoot()
-        maskParentFrame.x = 0
-        AssetsOffset += maskParentFrame.height() - layerFrameHeightWithStyle
-        [current setHasClippingMask:true]
-      }
-      */
     }
-
-    /* TODO: Figure out how to scale up bitmaps on the Components page
-    But the question is how do you tell what the native resolution of a bitmap is? writeBitmapImageToFile?
-    log('should I export '+layer+' bitmap: '+is_bitmap(layer))
-    if(is_bitmap(layer)){
-      //export_full_bitmap(page, layer,images_folder + "/" + sanitize_filename(layer.name()) + "-bitmap.png")
-    }
-    */
-    layerNames[layerName] = layer;
   }
+
+  return AssetsOffset;
   
 }
 
 function metadata_for(layer) {
-  var frame = [layer frame];
+  // var frame = [layer frame];
   var gkRect = [GKRect rectWithRect:[layer rectByAccountingForStyleSize:[[layer absoluteRect] rect]]];
   var absRect = [layer absoluteRect];
   var parentPositionRect = [[layer parentGroup] absoluteRect]
@@ -566,7 +380,7 @@ function metadata_for(layer) {
 
   var hasMask = false;
 
-  if (layer.hasClippingMask) {
+  if (layer.hasClippingMask()) {
     hasMask = true;
     layer.hasClippingMask = false;
   }
@@ -582,73 +396,41 @@ function metadata_for(layer) {
     layer.hasClippingMask = true;
   }
 
-  log(JSON.stringify(r))
-
   return r
 }
 
-function process_layer_states(layer, artboardName, depth) {
+function process_layer_states(layer, artboardName, depth, states_metadata) {
   depth += 1
   
   // Get layer data
   var layerName = [layer name]
-  var layerClassName = [layer className]
+  var layerclass = [layer class]
   var layerNameClean = sanitize_filename(layerName);
-
-  if(should_ignore_layer(layer)) {
-    log_depth("Ignoring <" + layerName + "> of type <" + layerClassName + ">", depth)
-    return false;
-  }
   
   if(should_become_view(layer)){
-    log_depth("Processing <" + layerName + "> of type <" + layerClassName + ">", depth)
-
     var layerFrame = metadata_for(layer)
     var layerStyle = [layer style];
 
     states_metadata[artboardName][layerNameClean] = {}
-    log('making layer sheet object: '+layerNameClean)
-    var layerState = states_metadata[artboardName][layerNameClean]
+    var layerState = {}
     
     layerState.frame = layerFrame;
     layerState.frame.opacity = [[layerStyle contextSettings] opacity];
     layerState.frame.rotationZ = -[layer rotation];
     layerState.visible = !![layer isVisible];
 
-    if(has_art(layer) && !should_use_css(layer)) {
+    //if(has_art(layer) && !should_use_css(layer)) {
       layerState.image = "images/" + layerNameClean + ".png";
+    //}
+    
+    var superLayer = [layer parentGroup];
+    var superLayerClass = [superLayer class];
+    if( superLayerClass != 'MSArtboardGroup' && superLayerClass != 'MSPage'){
+      layerState['parentGroup'] = sanitize_filename([superLayer name]);
     }
-    
-    layerState.style = extract_style_from(layer);
 
-    // TODO: Make layer names have animation properities
-    // if(layerName.indexOf('delay') > -1){
-    //   log('Automagic: Delay '+layer.name.match(/delay([0-9]*)/)[1])
-    //   child.delay = parseInt(layerName.match(/delay([0-9]*)/)[1])
-    //   layerName = layerName.replace(/_?delay([0-9]*)_?/,"")
-    // }
-    // if(layerName.indexOf('time') > -1){
-    //   log('Automagic: Time '+layer.name.match(/time([0-9]*)/)[1])
-    //   child.time = parseInt(layerName.match(/time([0-9]*)/)[1])
-    //   layerName = layerName.replace(/_?time([0-9]*)_?/,"")
-    // }
-    // if(layerName.indexOf('spring') > -1){
-    //   log('Automagic: spring '+layer.name)
-    //   child.curve = 'spring(400,30,200)'
-    //   layerName = layerName.replace(/_?spring?/,"")
-    // }
-    // if(layerName.indexOf('ease-in') > -1){
-    //   log('Automagic: ease-in '+layer.name)
-    //   child.curve = 'ease-in'
-    //   layerName = layerName.replace(/_?ease-in?/,"")
-    // }
-    // if(layerName.indexOf('ease-out') > -1){
-    //   log('Automagic: ease-out '+layer.name)
-    //   child.curve = 'ease-out'
-    //   layerName = layerName.replace(/_?ease-out?/,"")
-    // }
+    states_metadata[artboardName][layerNameClean] = layerState;
     
-
     // Export image if layer has no subgroups
     if (!should_flatten_layer(layer) && is_group(layer)) {
       var childLayers = [layer layers];
@@ -657,7 +439,6 @@ function process_layer_states(layer, artboardName, depth) {
       for (var childLayerIndex=(childLayersCount - 1); childLayerIndex >= 0; childLayerIndex--) {
         var current = [childLayers objectAtIndex:childLayerIndex];
         if([current hasClippingMask]) {
-          log('found mask'+current)
           var maskParentFrame = layerState.frame;
           var metadataForMask = metadata_for(current);
           
@@ -670,30 +451,15 @@ function process_layer_states(layer, artboardName, depth) {
 
         }else{
           if(!is_bitmap(current)){
-            log('not a mask'+current+' '+is_bitmap(layer))
-            process_layer_states(current,artboardName,depth+1);  
+            states_metadata = process_layer_states(current,artboardName,depth+1,states_metadata);  
           }
           
         }
       }
     }
-
-    // Capture hierarchy in export    
-    if([layer parentGroup]){
-      var parentGroup = [layer parentGroup]
-      if(![parentGroup isMemberOfClass:[MSArtboardGroup class]] && ![parentGroup isMemberOfClass:[MSPage class]]){
-        layerState.parentGroup = sanitize_filename([parentGroup name])
-      }
-    }
     
   }
 
-  // TODO: Figure out how to scale up bitmaps on the Components page
-  // But the question is how do you tell what the native resolution of a bitmap is? writeBitmapImageToFile?
-  // log('should I export '+layer+' bitmap: '+is_bitmap(layer))
-  // if(is_bitmap(layer)){
-  //   //export_full_bitmap(page, layer,images_folder + "/" + sanitize_filename(layer.name()) + "-bitmap.png")
-  // }
-  
+  return states_metadata;
 
 }

@@ -48,7 +48,7 @@ var loadLayers = function() {
   nestLayer = function(layerName, stateName) {
     var layerInSheet = FramerStatesSheet[stateName][layerName]
     var layer = LayersByName[layerName]
-    var superLayer = Framer.Config.mainLayer;
+    //var superLayer = Framer.Config.mainLayer;
     if(layerInSheet.parentGroup){
       var superLayer = LayersByName[layerInSheet.parentGroup]
       superLayer.addSubLayer(layer)
@@ -142,7 +142,7 @@ FramerStatesHelper.switch = function(stateName) {
   }
 }
 
-FramerStatesHelper.switchToNextState = function() {
+FramerStatesHelper.animateToNextState = function() {
   FramerStatesHelper.switch(FramerStatesHelper.cycle())
 }
 
@@ -168,7 +168,7 @@ FramerStatesHelper.extend = function(target, source) {
   target = target || {};
   for (var prop in source) {
     if (typeof source[prop] === 'object') {
-      target[prop] = extend(target[prop], source[prop]);
+      target[prop] = FramerStatesHelper.extend(target[prop], source[prop]);
     } else {
       target[prop] = source[prop];
     }
