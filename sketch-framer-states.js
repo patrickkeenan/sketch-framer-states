@@ -66,11 +66,11 @@ function export_layer(layer,images_folder) {
 
   if(should_become_view(layer)){
     [layer setIsVisible:true];
-    var filename = images_folder + "/" + sanitize_filename(layerName) + ".png";
-    var slice = [[MSSliceMaker slicesFromExportableLayer:layer] firstObject]
+    var filename = images_folder + "/" + sanitize_filename(layerName) + ".png",
+        rect = [layer rectByAccountingForStyleSize:[[layer absoluteRect] rect]],
+        slice = [MSSlice sliceWithRect:rect scale:1];
     
-    var imageData = [MSSliceExporter dataForSlice:slice format:@"png"]
-    [imageData writeToFile:filename atomically:false]
+    [doc saveArtboardOrSlice:slice toFile:filename];
   }
 
   if (layerName.indexOf("@@mask") != -1) {
