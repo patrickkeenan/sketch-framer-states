@@ -301,7 +301,7 @@ function removeAssetsPage(ASSETS_PAGE_NAME) {
 }
 
 function addLayerToAssetsPage(layer, assetsPage, AssetsOffset) {
-  if (is_group(layer) && should_become_view(layer)){ // && !should_use_css(layer)) {
+  if (is_group(layer) && should_become_view(layer) && !should_use_css(layer)) {
     var styles = {};
     assetsPage.addLayer(layer);
 
@@ -419,9 +419,13 @@ function process_layer_states(layer, artboardName, depth, states_metadata) {
     layerState.frame.rotationZ = -[layer rotation];
     layerState.visible = !![layer isVisible];
 
-    //if(has_art(layer) && !should_use_css(layer)) {
+    if(has_art(layer) && !should_use_css(layer)) {
       layerState.image = "images/" + layerNameClean + ".png";
-    //}
+    } else {
+      log('not exporting ' + layerName);
+    }
+
+    layerState.style = extract_style_from(layer);
     
     var superLayer = [layer parentGroup];
     var superLayerClass = [superLayer class];

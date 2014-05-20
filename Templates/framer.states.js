@@ -135,6 +135,7 @@ FramerStatesHelper.switch = function(stateName) {
       });
 
       FramerStatesHelper.switchEvents(stateName, layer);
+      FramerStatesHelper.switchStyles(stateName, layer);
 
     } else {
       layer.visible = false;
@@ -154,6 +155,15 @@ FramerStatesHelper.switchEvents = function(stateName, layer){
     }
     if (eventsInSheet['load']) {
       eventsInSheet['load'].call(layer)
+    }
+  }
+}
+
+FramerStatesHelper.switchStyles = function(stateName, layer){
+  var stylesInSheet = FramerStatesSheet[stateName][layer.name].style;
+  if (stylesInSheet) {
+    for (var style in stylesInSheet) {
+      layer.style[style] = stylesInSheet[style];
     }
   }
 }
