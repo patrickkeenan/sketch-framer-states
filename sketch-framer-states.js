@@ -140,6 +140,7 @@ function shape_type(layer) {
   if (!is_shape_container(layer)) { return; }
   var child = [[layer layers] firstObject];
   var shape = [[child layers] firstObject];
+  log('blur: '+child+' '+[[[child style] blur] radius])
   return [shape class];
 }
 
