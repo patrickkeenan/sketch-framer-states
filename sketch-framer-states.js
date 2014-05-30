@@ -66,11 +66,26 @@ function export_layer(layer,images_folder) {
 
   if(should_become_view(layer)){
     [layer setIsVisible:true];
-    var filename = images_folder + "/" + sanitize_filename(layerName) + ".png",
-        rect = [layer rectByAccountingForStyleSize:[[layer absoluteRect] rect]],
-        slice = [MSSlice sliceWithRect:rect scale:1];
-    
-    [doc saveArtboardOrSlice:slice toFile:filename];
+    var filename = images_folder + "/" + sanitize_filename(layerName) + ".png";
+    var rect = [layer rectByAccountingForStyleSize:[[layer absoluteRect] rect]];
+
+    // slice = [MSSlice sliceWithRect:rect scale:1];
+    // [doc saveArtboardOrSlice:slice toFile:filename];
+
+    if([NSApp applicationVersion] == '3.0.2'){
+      var slice = [MSSlice sliceWithRect:rect scale:1];
+      log("= 3.0.2 — writing asset " + slice + " to disk: " + filename)
+      [doc saveArtboardOrSlice:slice toFile:filename];
+    }else{
+      var slice = [[MSSliceMaker slicesFromExportableLayer:layer inRect:rect] firstObject]
+      slice.page = [[doc currentPage] copyLightweight]
+      slice.format = "png"
+
+      log("> 3.0.2 — writing asset " + slice + " to disk: " + filename)
+      var imageData = [MSSliceExporter dataForRequest:slice]
+      [imageData writeToFile:filename atomically:true]
+    }
+
   }
 
   if (layerName.indexOf("@@mask") != -1) {
@@ -140,7 +155,6 @@ function shape_type(layer) {
   if (!is_shape_container(layer)) { return; }
   var child = [[layer layers] firstObject];
   var shape = [[child layers] firstObject];
-  log('blur: '+child+' '+[[[child style] blur] radius])
   return [shape class];
 }
 
@@ -206,8 +220,14 @@ function extract_style_from(layerGroup) {
   if (!should_use_css(layerGroup)) { return {}; }
 
   var styles = {};
+  
+  
   var cssString = [layerGroup CSSAttributeString];
   var cssLines = cssString.split('\n');
+
+  var layerBg = [[layerGroup layers] firstObject];
+  log('got BG: '+layerBg)
+  var layerStyle = [layerBg style];
 
   cssLines.forEach(function(line) {
     var values = line.split(":");
@@ -220,6 +240,16 @@ function extract_style_from(layerGroup) {
 
   if (shape_type(layerGroup) == "MSOvalShape") {
     styles.borderRadius = "9999px";
+  }
+
+  try{
+    layerBlur = [layerStyle blur];
+    if(layerBlur.isEnabled()){
+      styles.blur = [layerBlur radius]
+      log('got blur: '+layerBg+' '+[layerBlur radius])
+    }
+  }catch(e){
+    log('error: blur')
   }
 
   return styles;
@@ -370,7 +400,7 @@ function addLayerToAssetsPage(layer, assetsPage, AssetsOffset) {
 
 function metadata_for(layer) {
   // var frame = [layer frame];
-  var gkRect = [GKRect rectWithRect:[layer rectByAccountingForStyleSize:[[layer absoluteRect] rect]]];
+  var gkRect = [GKRect rectWithRect:[[layer absoluteRect] rect]];
   var absRect = [layer absoluteRect];
   var parentPositionRect = [[layer parentGroup] absoluteRect]
 
@@ -427,6 +457,9 @@ function process_layer_states(layer, artboardName, depth, states_metadata) {
     }
 
     layerState.style = extract_style_from(layer);
+
+    if(layerState.style.blur) layerState.frame.blur = layerState.style.blur;
+    else layerState.frame.blur = 0;
     
     var superLayer = [layer parentGroup];
     var superLayerClass = [superLayer class];
@@ -455,6 +488,7 @@ function process_layer_states(layer, artboardName, depth, states_metadata) {
           layerState.clip = true;
 
         }else{
+          // layerState.style.overflow = "visible";
           if(!is_bitmap(current)){
             states_metadata = process_layer_states(current,artboardName,depth+1,states_metadata);  
           }

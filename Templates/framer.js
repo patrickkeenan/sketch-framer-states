@@ -968,8 +968,6 @@ exports.Config = {
     "display": "block",
     "position": "absolute",
     "-webkit-box-sizing": "border-box",
-    "-webkit-transform-style": "preserve-3d",
-    "-webkit-backface-visibility": "visible",
     "background-repeat": "no-repeat",
     "background-size": "cover",
     "-webkit-overflow-scrolling": "touch"
@@ -1094,7 +1092,8 @@ Originals = {
     height: 100
   },
   Animation: {
-    curve: "spring(500,30,0)"
+    curve: "linear",
+    time: 1
   }
 };
 
@@ -1630,8 +1629,6 @@ exports.Layer = (function(_super) {
     this._subLayers = [];
   }
 
-  Layer.define("name", Layer.simpleProperty("name", ""));
-
   Layer.define("width", layerProperty("width", "width", 100));
 
   Layer.define("height", layerProperty("height", "height", 100));
@@ -1717,6 +1714,18 @@ exports.Layer = (function(_super) {
 
   Layer.define("borderWidth", layerStyleProperty("borderWidth"));
 
+  Layer.define("name", {
+    exportable: true,
+    "default": "",
+    get: function() {
+      return this._getPropertyValue("name");
+    },
+    set: function(value) {
+      this._setPropertyValue("name", value);
+      return this._element.setAttribute("name", value);
+    }
+  });
+
   Layer.define("frame", {
     get: function() {
       return new Frame(this);
@@ -1764,10 +1773,10 @@ exports.Layer = (function(_super) {
 
   Layer.prototype.centerFrame = function() {
     var frame;
-    if (this.superView) {
+    if (this.superLayer) {
       frame = this.frame;
-      frame.midX = parseInt(this.superView.width / 2.0);
-      frame.midY = parseInt(this.superView.height / 2.0);
+      frame.midX = parseInt(this.superLayer.width / 2.0);
+      frame.midY = parseInt(this.superLayer.height / 2.0);
       return frame;
     } else {
       frame = this.frame;
@@ -2330,7 +2339,7 @@ exports.LayerDraggable = (function(_super) {
 
 
 },{"./EventEmitter":13,"./Events":14,"./Underscore":22,"./Utils":23}],20:[function(require,module,exports){
-var EventEmitter, Events, LayerStatesIgnoredKeys, _,
+var BaseClass, Defaults, Events, LayerStatesIgnoredKeys, _,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
@@ -2339,7 +2348,9 @@ _ = require("./Underscore")._;
 
 Events = require("./Events").Events;
 
-EventEmitter = require("./EventEmitter").EventEmitter;
+BaseClass = require("./BaseClass").BaseClass;
+
+Defaults = require("./Defaults").Defaults;
 
 LayerStatesIgnoredKeys = ["ignoreEvents"];
 
@@ -2354,12 +2365,11 @@ exports.LayerStates = (function(_super) {
     this.layer = layer;
     this._states = {};
     this._orderedStates = [];
-    this.animationOptions = {
-      curve: "spring"
-    };
+    this.animationOptions = {};
     this.add("default", this.layer.properties);
     this._currentState = "default";
     this._previousStates = [];
+    LayerStates.__super__.constructor.apply(this, arguments);
   }
 
   LayerStates.prototype.add = function(stateName, properties) {
@@ -2392,9 +2402,12 @@ exports.LayerStates = (function(_super) {
     return this._orderedStates = _.without(this._orderedStates, stateName);
   };
 
-  LayerStates.prototype["switch"] = function(stateName, animationOptions) {
-    var animatingKeys, animation, k, v, _ref,
+  LayerStates.prototype["switch"] = function(stateName, animationOptions, instant) {
+    var animatingKeys, properties, propertyName, value, _ref,
       _this = this;
+    if (instant == null) {
+      instant = false;
+    }
     if (stateName === this._currentState) {
       return;
     }
@@ -2404,37 +2417,52 @@ exports.LayerStates = (function(_super) {
     this.emit(Events.StateWillSwitch, this._currentState, stateName, this);
     this._previousStates.push(this._currentState);
     this._currentState = stateName;
-    if (animationOptions == null) {
-      animationOptions = this.animationOptions;
-    }
-    animationOptions.properties = {};
+    properties = {};
     animatingKeys = this.animatingKeys();
     _ref = this._states[stateName];
-    for (k in _ref) {
-      v = _ref[k];
-      if (__indexOf.call(LayerStatesIgnoredKeys, k) >= 0) {
+    for (propertyName in _ref) {
+      value = _ref[propertyName];
+      if (__indexOf.call(LayerStatesIgnoredKeys, propertyName) >= 0) {
         continue;
       }
-      if (__indexOf.call(animatingKeys, k) < 0) {
+      if (__indexOf.call(animatingKeys, propertyName) < 0) {
         continue;
       }
-      if (_.isFunction(v)) {
-        v = v.call(this.layer, this.layer, stateName);
+      if (_.isFunction(value)) {
+        value = value.call(this.layer, this.layer, stateName);
       }
-      animationOptions.properties[k] = v;
+      properties[propertyName] = value;
     }
-    animation = this.layer.animate(animationOptions);
-    return animation.on("stop", function() {
-      return _this.emit(Events.StateDidSwitch, _.last(_this._previousStates), stateName, _this);
-    });
+    if (instant === true) {
+      this.layer.properties = properties;
+      return this.emit(Events.StateDidSwitch, _.last(this._previousStates), stateName, this);
+    } else {
+      if (animationOptions == null) {
+        animationOptions = this.animationOptions;
+      }
+      animationOptions.properties = properties;
+      this._animation = this.layer.animate(animationOptions);
+      return this._animation.on("stop", function() {
+        return _this.emit(Events.StateDidSwitch, _.last(_this._previousStates), stateName, _this);
+      });
+    }
   };
 
   LayerStates.prototype.switchInstant = function(stateName) {
-    return this["switch"](stateName, {
-      curve: "linear",
-      time: 0
-    });
+    return this["switch"](stateName, null, true);
   };
+
+  LayerStates.define("state", {
+    get: function() {
+      return this._currentState;
+    }
+  });
+
+  LayerStates.define("current", {
+    get: function() {
+      return this._currentState;
+    }
+  });
 
   LayerStates.prototype.states = function() {
     return _.clone(this._orderedStates);
@@ -2476,10 +2504,10 @@ exports.LayerStates = (function(_super) {
 
   return LayerStates;
 
-})(EventEmitter);
+})(BaseClass);
 
 
-},{"./EventEmitter":13,"./Events":14,"./Underscore":22}],21:[function(require,module,exports){
+},{"./BaseClass":8,"./Defaults":12,"./Events":14,"./Underscore":22}],21:[function(require,module,exports){
 var filterFormat, _WebkitProperties;
 
 filterFormat = function(value, unit) {
